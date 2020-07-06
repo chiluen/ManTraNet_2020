@@ -1,5 +1,8 @@
 import numpy as np
+import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from torch.nn.modules.utils import _pair
 
 def _pad_symmetric(input, padding):
     # padding is left, right, top, bottom
