@@ -16,6 +16,7 @@
 
 from torch.autograd import Variable
 import torch.nn as nn
+import torch
 
 class Conv2DSymPadding(nn.Module) :
     def __init__(self, filters,
@@ -271,7 +272,7 @@ class GlobalStd2D( Layer ) :
     def compute_output_shape( self, input_shape ) :
         return (input_shape[0], 1, 1, input_shape[-1] )
 
-class NestedWindowAverageFeatExtrator( Layer ) :
+class NestedWindowAverageFeatExtrator(nn.Module) :
     '''Custom Keras Layer of NestedWindowAverageFeatExtrator
     '''
     def __init__( self,
@@ -301,9 +302,9 @@ class NestedWindowAverageFeatExtrator( Layer ) :
         self.max_wh, self.max_ww = self._get_max_size()
         return
     def _initialize_ii_buffer( self, x ) :
-        x_pad = K.spatial_2d_padding( x, ((self.max_wh//2+1,self.max_wh//2+1), (self.max_ww//2+1,self.max_ww//2+1)) )
-        ii_x  = K.cumsum( x_pad, axis=1 )
-        ii_x2 = K.cumsum( ii_x, axis=2 )
+        x_pad = F.pad(x, (self.max_wh//2+1, self.max_wh//2+1, self.max_ww//2+1, self.max_ww//2+1),"constant",value = 0)
+        ii_x  = torch.cumsum( x_pad, axis = 2) # height
+        ii_x2 = torch.cumsum( ii_x, axis = 3) # width
         return ii_x2
     def _get_max_size( self ) :
         mh, mw = 0, 0
@@ -335,7 +336,7 @@ class NestedWindowAverageFeatExtrator( Layer ) :
         Cy0, Cx0 = (bot_0, right_0) #By + height, Bx
         Dy0, Dx0 = (bot_0, left_0) #Cy, Ax
         # used in testing, where each batch is a sample of different shapes
-        counts = K.ones_like( x[:1,...,:1] )
+        counts = torch.ones_like( x[:1,...,:1] )
         count_ii = self._initialize_ii_buffer( counts )
         # compute winsize if necessary
         counts_2d = count_ii[:,Ay:Ay0, Ax:Ax0] \
@@ -350,7 +351,7 @@ class NestedWindowAverageFeatExtrator( Layer ) :
         # 3. compute average feature
         avg_x_2d = sum_x_2d / counts_2d
         return avg_x_2d
-    def call( self, x ) :
+    def forward( self, x ) :
         x_win_avgs = []
         # 1. compute corr(x, window_mean) for different sizes
         # 1.1 compute integral image buffer
@@ -368,15 +369,17 @@ class NestedWindowAverageFeatExtrator( Layer ) :
         # 2. compute corr(x, global_mean)
         if ( self.include_global ) :
             if ( self.minus_original ) :
-                mu = K.mean( x, axis=(1,2), keepdims=True )
+                mu = torch.mean(x, dim = (2,3), keepdim = True)
                 x_win_avgs.append( mu-x )
             else :
-                mu = K.mean( x, axis=(1,2), keepdims=True ) * K.ones_like(x)
+                mu = torch.mean(x, dim = (2,3), keepdim = True) * torch.ones_like(x)
                 x_win_avgs.append( mu )
         if self.output_mode == '4d' :
-            return K.concatenate( x_win_avgs, axis=-1 )
+            # concate channel
+            return torch.cat( x_win_avgs, axis= 1)
         elif self.output_mode == '5d' :
-            return K.stack( x_win_avgs, axis=1 )
+            # stack num_woi
+            return torch.stack( x_win_avgs, axis= 1)
         else :
             raise (NotImplementedError, "ERROR: unknown output_mode={}".format( self.output_mode ))
     def compute_output_shape(self, input_shape):
