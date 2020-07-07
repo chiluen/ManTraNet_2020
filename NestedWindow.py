@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+import torch.nn.functional as F
 
 class NestedWindowAverageFeatExtrator(nn.Module) :
     '''Custom Keras Layer of NestedWindowAverageFeatExtrator
@@ -22,13 +23,13 @@ class NestedWindowAverageFeatExtrator(nn.Module) :
         self.output_mode = output_mode
         self.minus_original = minus_original
         self.include_global = include_global
-        super(NestedWindowAverageFeatExtrator, self).__init__(**kwargs)
-    def build( self, input_shape ) :
         self.num_woi = len( self.window_size_list )
         self.count_ii = None
         self.lut = dict()
         self.built = True
         self.max_wh, self.max_ww = self._get_max_size()
+        super(NestedWindowAverageFeatExtrator, self).__init__(**kwargs)
+
         return
     def _initialize_ii_buffer( self, x ) :
         x_pad = F.pad(x, (self.max_wh//2+1, self.max_wh//2+1, self.max_ww//2+1, self.max_ww//2+1),"constant",value = 0)
@@ -65,18 +66,18 @@ class NestedWindowAverageFeatExtrator(nn.Module) :
         Cy0, Cx0 = (bot_0, right_0) #By + height, Bx
         Dy0, Dx0 = (bot_0, left_0) #Cy, Ax
         # used in testing, where each batch is a sample of different shapes
-        counts = torch.ones_like( x[:1,...,:1] )
+        counts = torch.ones_like( x[:1, :1, ...] )
         count_ii = self._initialize_ii_buffer( counts )
         # compute winsize if necessary
-        counts_2d = count_ii[:,Ay:Ay0, Ax:Ax0] \
-                  + count_ii[:,Cy:Cy0, Cx:Cx0] \
-                  - count_ii[:,By:By0, Bx:Bx0] \
-                  - count_ii[:,Dy:Dy0, Dx:Dx0]
+        counts_2d = count_ii[:,:,Ay:Ay0, Ax:Ax0] \
+                  + count_ii[:,:,Cy:Cy0, Cx:Cx0] \
+                  - count_ii[:,:,By:By0, Bx:Bx0] \
+                  - count_ii[:,:,Dy:Dy0, Dx:Dx0]
         # 2. compute summed feature
-        sum_x_2d = x_ii[:,Ay:Ay0, Ax:Ax0] \
-                 + x_ii[:,Cy:Cy0, Cx:Cx0] \
-                 - x_ii[:,By:By0, Bx:Bx0] \
-                 - x_ii[:,Dy:Dy0, Dx:Dx0]
+        sum_x_2d = x_ii[:,:,Ay:Ay0, Ax:Ax0] \
+                 + x_ii[:,:,Cy:Cy0, Cx:Cx0] \
+                 - x_ii[:,:,By:By0, Bx:Bx0] \
+                 - x_ii[:,:,Dy:Dy0, Dx:Dx0]
         # 3. compute average feature
         avg_x_2d = sum_x_2d / counts_2d
         return avg_x_2d
