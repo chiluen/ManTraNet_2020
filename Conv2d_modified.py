@@ -138,3 +138,76 @@ def conv2d_same_padding(input, weight, bias=None, stride=1, padding='VALID', dil
         raise ValueError('Padding should be SAME, VALID or specific integer, but not {}.'.format(padding))
     return F.conv2d(input, weight, bias, stride, padding=padding,
                     dilation=dilation, groups=groups)
+
+
+
+
+class Conv2d_samepadding_unitnorm(_ConvNd):
+
+    def __init__(self, in_channels, out_channels, kernel_size, stride=[1, 1],
+                 padding='VALID', dilation=[1, 1], groups=1, bias=True, weight=None):
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
+        super().__init__(
+            in_channels, out_channels, kernel_size, stride, padding, dilation,
+            False, _pair(0), groups, bias, weight)
+
+    def forward(self, input):
+        return conv2d_same_padding_unitnorm(input, self.weight, self.bias, self.stride, \
+                                   self.padding, self.dilation, self.groups)
+
+
+
+# custom con2d, because pytorch don't have "padding='same'" option.
+def conv2d_same_padding_unitnorm(input, weight, bias=None, stride=1, padding='VALID', dilation=1, groups=1):
+    def check_format(*argv):
+        argv_format = []
+        for i in range(len(argv)):
+            if type(argv[i]) is int:
+                argv_format.append((argv[i], argv[i]))
+            elif hasattr(argv[i], "__getitem__"):
+                argv_format.append(tuple(argv[i]))
+            else:
+                raise TypeError('all input should be int or list-type, now is {}'.format(argv[i]))
+
+        return argv_format
+    
+    stride, dilation = check_format(stride, dilation)
+
+    if padding == 'SAME':
+        padding = 0
+
+        input_rows = input.size(2)
+        filter_rows = weight.size(2)
+        out_rows = (input_rows + stride[0] - 1) // stride[0]
+        padding_rows = max(0, (out_rows - 1) * stride[0] +
+                            (filter_rows - 1) * dilation[0] + 1 - input_rows)
+        rows_odd = padding_rows % 2
+
+        input_cols = input.size(3)
+        filter_cols = weight.size(3)
+        out_cols = (input_cols + stride[1] - 1) // stride[1]
+        padding_cols = max(0, (out_cols - 1) * stride[1] +
+                            (filter_cols - 1) * dilation[1] + 1 - input_cols)
+        cols_odd = padding_cols % 2
+
+        input = pad(input, [padding_cols // 2, padding_cols // 2 + int(cols_odd),
+                            padding_rows // 2, padding_rows // 2 + int(rows_odd)])
+    
+    elif padding == 'VALID':
+        padding = 0
+    
+    elif type(padding) != int:        
+        raise ValueError('Padding should be SAME, VALID or specific integer, but not {}.'.format(padding))
+    return F.conv2d(input, weight/torch.norm(weight), bias, stride, padding=padding,
+                    dilation=dilation, groups=groups)
+
+
+
+
+
+
+
+
