@@ -16,6 +16,7 @@
 
 from torch.autograd import Variable
 import torch.nn as nn
+import torch
 
 class Conv2DSymPadding(nn.Module) :
     def __init__(self, filters,
