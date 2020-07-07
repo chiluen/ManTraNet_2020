@@ -42,7 +42,7 @@ class Conv2DSymPadding(nn.Conv2d):
                                                padding=(ph, pw))
 
     def _conv_forward(self, input, weight):
-        return F.conv2d(_pad_symmetric(input, self._reversed_padding_repeated_twice),
+        return F.conv2d(_pad_symmetric(input, (pw, pw, ph, ph)),
                         weight, self.bias, self.stride,
                         _pair(0), self.dilation, self.groups)
 
