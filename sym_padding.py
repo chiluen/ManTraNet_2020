@@ -35,14 +35,14 @@ class Conv2DSymPadding(nn.Conv2d):
             kh, kw = kernel_size
         else:
             kh = kw = kernel_size
-        ph, pw = kh//2, kw//2
+        self.ph, self.pw = kh//2, kw//2
 
         super(Conv2DSymPadding, self).__init__(in_channels, out_channels, kernel_size,
                                                stride=stride, dilation=dilation, bias=bias, 
-                                               padding=(ph, pw))
+                                               padding=(self.ph, self.pw))
 
     def _conv_forward(self, input, weight):
-        return F.conv2d(_pad_symmetric(input, (pw, pw, ph, ph)),
+        return F.conv2d(_pad_symmetric(input, (self.pw, self.pw, self.ph, self.ph)),
                         weight, self.bias, self.stride,
                         _pair(0), self.dilation, self.groups)
 
