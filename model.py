@@ -43,8 +43,9 @@ class ManTraNet(nn.Module):
 
 
 def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     type_idx = IMC_model_idx if IMC_model_idx < 4 else 2
-    Featex = create_featex.Featex_vgg16_base(type_idx)
+    Featex = create_featex.Featex_vgg16_base(type_idx).to(device)
     if freeze_featex:
         print("INFO: freeze feature extraction part, trainable=False")
         #Featex.trainable = False ##它沒有trainable這個選項阿？？？  
@@ -57,8 +58,7 @@ def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
             print("INFO: freeze", ly.name)
     """
     model = ManTraNet(Featex, pool_size_list=window_size_list, is_dynamic_shape=True, apply_normalization=True)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model#.to(device)
+    model.to(device)
     return model
 
 

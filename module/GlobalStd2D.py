@@ -9,15 +9,16 @@ class GlobalStd2D(nn.Module):
     """
     def __init__(self, nb_feats, min_std_val=1e-5,**kwargs):
         super().__init__()
-        self.min_std_val = min_std_val
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.min_std_val = torch.tensor(min_std_val, device=device)
         
         #build min_std部份
         #nb_feats = input_shape[-3] # for pytorch "channel"
         std_shape = (1, nb_feats, 1, 1)
-        self.min_std_unconstraint = torch.nn.Parameter(torch.full(std_shape, self.min_std_val), requires_grad = True) 
+        self.min_std_unconstraint = torch.nn.Parameter(torch.full(std_shape, self.min_std_val, device=device), requires_grad = True)
         self.min_std = self.min_std_unconstraint.data.clamp(0,float("inf"))
     def forward(self, x):
-        x_std = torch.std(x, dim = (2,3), keepdim=True) #改對應dimension（但感覺怪怪的）
+        x_std = torch.std(x, dim = (2,3), keepdim=True) 
         x_std = torch.max(x_std, self.min_std_val/10. + self.min_std)
         return x_std
     #def compute_output_shape(self, input_shape):
