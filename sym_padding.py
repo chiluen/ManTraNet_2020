@@ -131,7 +131,7 @@ class CombinedConv2D(Conv2DSymPadding):
                             self.bayar_kernel]
     
     def apply_bayar_constraint(self):
-        self.bayar_constraint(self.bayar_kernel.data)
+        self.bayar_kernel.data = self.bayar_constraint(self.bayar_kernel.data)
         return
     
     def forward(self, input):
