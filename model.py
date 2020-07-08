@@ -16,29 +16,29 @@ class ManTraNet(nn.Module):
         self.apply_normalization = apply_normalization
 
         #layers
-        self.Conv2D_padding_constraint = Conv2d_modified.Conv2d_samepadding_unitnorm(256, 64, 1, padding='SAME') 
-        self.Conv2D_padding = Conv2d_modified.Conv2d_samepadding(8, 1, 7, padding="SAME")  ##還沒做更改
-        self.Batchnorm = nn.BatchNorm2d(64)
-        self.NestedWindowAverageFeatExtrator = NestedWindow.NestedWindowAverageFeatExtrator(window_size_list= self.pool_size_list, 
+        self.outlierTrans = Conv2d_modified.Conv2d_samepadding_unitnorm(256, 64, 1, padding='SAME') 
+        self.pred = Conv2d_modified.Conv2d_samepadding(8, 1, 7, padding="SAME")  ##還沒做更改
+        self.bnorm = nn.BatchNorm2d(64)
+        self.nestedAvgFeatex = NestedWindow.NestedWindowAverageFeatExtrator(window_size_list= self.pool_size_list, 
                                                                                output_mode='5d',
                                                                                minus_original=True) 
-        self.GlobalStd2D = GlobalStd2D.GlobalStd2D(64)   #input: number of features
-        self.ConvLSTM = ConvLSTM.ConvLSTM(input_dim = 64, hidden_dim = 8, kernel_size = (7, 7), num_layers = 1, batch_first = True, bias = True, return_all_layers = False)
+        self.glbStd = GlobalStd2D.GlobalStd2D(64)   #input: number of features
+        self.cLSTM = ConvLSTM.ConvLSTM(input_dim = 64, hidden_dim = 8, kernel_size = (7, 7), num_layers = 1, batch_first = True, bias = True, return_all_layers = False)
 
     def forward(self,x):
         rf = self.Featex(x) 
-        rf = self.Conv2D_padding_constraint(rf) 
-        bf = self.Batchnorm(rf) #(batch, channel=64, H, W)
-        devf5d = self.NestedWindowAverageFeatExtrator(bf) #(batch, 4, channel=64, H, W)
+        rf = self.outlierTrans(rf) 
+        bf = self.bnorm(rf) #(batch, channel=64, H, W)
+        devf5d = self.nestedAvgFeatex(bf) #(batch, 4, channel=64, H, W)
         if self.apply_normalization:
-            sigma = self.GlobalStd2D(bf) #(batch, channel, H, W)
+            sigma = self.glbStd(bf) #(batch, channel, H, W)
             sigma5d = torch.unsqueeze(sigma, 1) 
             devf5d = torch.abs(devf5d / sigma5d) 
 
         # Convert back to 4d
-        _, last_states = self.ConvLSTM(devf5d)  #(batch, channel = 8, H, W)
+        _, last_states = self.cLSTM(devf5d)  #(batch, channel = 8, H, W)
         devf = last_states[0][0] #(batch, channel = 8, H, W)
-        pred_out = self.Conv2D_padding(devf) #(batch, channel = 1, H, W)
+        pred_out = self.pred(devf) #(batch, channel = 1, H, W)
         return pred_out
 
 
