@@ -15,7 +15,11 @@ from torch.nn.modules.utils import _single, _pair, _triple
 #用法：Conv2D_unitnorm(3, 64, 1, stride=1, bias = False)
 class Conv2D_unitnorm(nn.Conv2d): #input:(batch, channel, Height, Weight)
     def forward(self, input):
-        return F.conv2d(input, self.weight/torch.norm(self.weight))
+        #self.weight = self.weight/torch.norm(self.weight)
+        return F.conv2d(input, self.weight)
+    def apply_constraint(self):  #拉到外面, 等到optimize之後再做
+        self.weight = self.weight/torch.norm(self.weight)
+
 
 
 #用法：Conv2d_samepadding(3,64,1,stride=1, padding='SAME')
@@ -158,6 +162,9 @@ class Conv2d_samepadding_unitnorm(_ConvNd):
         return conv2d_same_padding_unitnorm(input, self.weight, self.bias, self.stride, \
                                    self.padding, self.dilation, self.groups)
 
+    def apply_constraint(self):  #拉到外面, 等到optimize之後再做
+        self.weight = self.weight/torch.norm(self.weight)
+
 
 
 # custom con2d, because pytorch don't have "padding='same'" option.
@@ -201,7 +208,7 @@ def conv2d_same_padding_unitnorm(input, weight, bias=None, stride=1, padding='VA
     
     elif type(padding) != int:        
         raise ValueError('Padding should be SAME, VALID or specific integer, but not {}.'.format(padding))
-    return F.conv2d(input, weight/torch.norm(weight), bias, stride, padding=padding,
+    return F.conv2d(input, weight, bias, stride, padding=padding,
                     dilation=dilation, groups=groups)
 
 

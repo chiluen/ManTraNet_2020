@@ -86,10 +86,10 @@ class ConvLSTM(nn.Module):
             1 - last_state_list is the list of last states
                     each element of the list is a tuple (h, c) for hidden state and memory
     Example:
-        >> x = torch.rand((32, 10, 64, 128, 128))
-        >> convlstm = ConvLSTM(64, 16, 3, 1, True, True, False)
-        >> _, last_states = convlstm(x)
-        >> h = last_states[0][0]  # 0 for layer index, 0 for h index
+        >> devf5d = torch.rand((32, 10, 64, 128, 128))
+        ConvLSTM(input_dim = 64, hidden_dim = 8, kernel_size = (7, 7), num_layers = 1, batch_first = True, bias = True, return_all_layers = False)
+        _, last_states = self.ConvLSTM(devf5d)  #(batch, channel = 8, H, W)
+        devf = last_states[0][0] #(batch, channel = 8, H, W)
     """
 
     def __init__(self, input_dim, hidden_dim, kernel_size, num_layers,

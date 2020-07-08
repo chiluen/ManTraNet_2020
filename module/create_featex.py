@@ -1,4 +1,4 @@
-from sym_padding import *
+from module.sym_padding import *
 import torch
 import torch.nn.functional as F
 
