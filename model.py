@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
 from module import Conv2d_modified, ConvLSTM, create_featex, NestedWindow, GlobalStd2D
+import load_weights
 
 
 ##替代 create_manTraNet_model功能
@@ -45,7 +46,7 @@ class ManTraNet(nn.Module):
 def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     type_idx = IMC_model_idx if IMC_model_idx < 4 else 2
-    Featex = create_featex.Featex_vgg16_base(type_idx).to(device)
+    Featex = create_featex.Featex_vgg16_base(type_idx)
     if freeze_featex:
         print("INFO: freeze feature extraction part, trainable=False")
         #Featex.trainable = False ##它沒有trainable這個選項阿？？？  
@@ -58,9 +59,14 @@ def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
             print("INFO: freeze", ly.name)
     """
     model = ManTraNet(Featex, pool_size_list=window_size_list, is_dynamic_shape=True, apply_normalization=True)
-    model.to(device)
     return model
 
 
+def model_load_weights(weight_path, model):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model = load_weights.load_weights(weight_path, model)    
+    model.to(device)
+    
+    return model
 
 
