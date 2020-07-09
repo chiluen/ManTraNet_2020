@@ -82,10 +82,26 @@ class _ConvNd(Module):
         return s.format(name=self.__class__.__name__, **self.__dict__)
 
 
+
+
+
+
+
+
+
+
+
+#####################等等把same padding 改成一個就好
+
+
+
+
+
+##for samepadding(without unit norm)
 class Conv2d_samepadding(_ConvNd):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=[1, 1],
-                 padding='VALID', dilation=[1, 1], groups=1, bias=True, weight=None):
+                 padding='VALID', dilation=[1, 1], groups=1, bias=False, weight=None):
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
         padding = _pair(padding)
@@ -97,6 +113,10 @@ class Conv2d_samepadding(_ConvNd):
     def forward(self, input):
         return conv2d_same_padding(input, self.weight, self.bias, self.stride, \
                                    self.padding, self.dilation, self.groups)
+    
+
+    def apply_constraint(self):  #拉到外面, 等到optimize之後再做
+        self.weight = self.weight/torch.norm(self.weight)
 
 
 # custom con2d, because pytorch don't have "padding='same'" option.
@@ -145,11 +165,11 @@ def conv2d_same_padding(input, weight, bias=None, stride=1, padding='VALID', dil
 
 
 
-
+"""
 class Conv2d_samepadding_unitnorm(_ConvNd):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=[1, 1],
-                 padding='VALID', dilation=[1, 1], groups=1, bias=True, weight=None):
+                 padding='VALID', dilation=[1, 1], groups=1, bias=False, weight=None):
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
         padding = _pair(padding)
@@ -167,7 +187,7 @@ class Conv2d_samepadding_unitnorm(_ConvNd):
 
 
 
-# custom con2d, because pytorch don't have "padding='same'" option.
+
 def conv2d_same_padding_unitnorm(input, weight, bias=None, stride=1, padding='VALID', dilation=1, groups=1):
     def check_format(*argv):
         argv_format = []
@@ -210,7 +230,7 @@ def conv2d_same_padding_unitnorm(input, weight, bias=None, stride=1, padding='VA
         raise ValueError('Padding should be SAME, VALID or specific integer, but not {}.'.format(padding))
     return F.conv2d(input, weight, bias, stride, padding=padding,
                     dilation=dilation, groups=groups)
-
+"""
 
 
 
