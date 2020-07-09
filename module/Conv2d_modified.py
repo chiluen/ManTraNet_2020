@@ -81,22 +81,6 @@ class _ConvNd(Module):
         s += ')'
         return s.format(name=self.__class__.__name__, **self.__dict__)
 
-
-
-
-
-
-
-
-
-
-
-#####################等等把same padding 改成一個就好
-
-
-
-
-
 ##for samepadding(without unit norm)
 class Conv2d_samepadding(_ConvNd):
 
