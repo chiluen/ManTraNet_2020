@@ -17,7 +17,7 @@ class ManTraNet(nn.Module):
 
         #layers
         self.outlierTrans = Conv2d_modified.Conv2d_samepadding(256, 64, 1, padding='SAME')  #在optimizer那邊要做apply_normalization
-        self.pred = Conv2d_modified.Conv2d_samepadding(8, 1, 7, padding="SAME")  
+        self.pred = Conv2d_modified.Conv2d_samepadding(8, 1, 7, padding="SAME", bias=True)  
         self.bnorm = nn.BatchNorm2d(64, affine=False)
         self.nestedAvgFeatex = NestedWindow.NestedWindowAverageFeatExtrator(window_size_list= self.pool_size_list, 
                                                                                output_mode='5d',
