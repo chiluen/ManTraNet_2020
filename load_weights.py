@@ -2,6 +2,11 @@ import h5py
 import torch
 import numpy as np
 
+# Example:
+# import model, load_weights
+# m = model.create_model(4, True)
+# m = load_weights.load_weights('ManTraNet_Ptrain4.h5', m)
+
 def _load_Featex_weights(model, f):
     for k in f.keys():
         layer_name = k[:-2]
