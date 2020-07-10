@@ -49,3 +49,31 @@ def url_plot(url, model, xrange = None, yrange = None):
     pyplot.title('Highlighted Forged Regions')
     pyplot.suptitle('Decoded {} of size {} for {:.2f} seconds'.format( url, img.shape, ptime ) )
     pyplot.show()
+
+def file_plot(file_path, model):
+    rgb = cv2.imread( file_path, 1 )[...,::-1]
+    x = np.transpose(rgb, (2,0,1))
+    x = np.expand_dims( x.astype('float32')/255.*2-1, axis=0 )
+    x = torch.from_numpy(x).to(0, dtype=torch.float32)
+    t0 = datetime.now()
+    with torch.no_grad():
+        pred = model(x)
+    t1 = datetime.now()
+    pred_final = torch.squeeze(pred).cpu()
+    ptime = (t1-t0).total_seconds()
+
+
+    pyplot.figure( figsize=(15,5) )
+    pyplot.title('Original Image')
+    pyplot.subplot(131)
+    pyplot.imshow( rgb )
+    pyplot.title('Forged Image (ManTra-Net Input)')
+    pyplot.subplot(132)
+    pyplot.imshow( pred_final, cmap='gray' )
+    pyplot.title('Predicted Mask (ManTra-Net Output)')
+    pyplot.subplot(133)
+    pyplot.imshow( np.round(np.expand_dims(pred_final,axis=-1) * rgb).astype('uint8'), cmap='jet' )
+    pyplot.title('Highlighted Forged Regions')
+    pyplot.suptitle('Decoded {} of size {} for {:.2f} seconds'.format( file_path, rgb.shape, ptime ) )
+    pyplot.show()
+

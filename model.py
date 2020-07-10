@@ -26,8 +26,10 @@ class ManTraNet(nn.Module):
         self.glbStd = GlobalStd2D.GlobalStd2D(64)   #input: number of features
         self.cLSTM = ConvLSTM.ConvLSTM(input_dim = 64, hidden_dim = 8, kernel_size = (7, 7), num_layers = 1, batch_first = True, bias = True, return_all_layers = False)
         self.sigmoid = nn.Sigmoid()
+        self.featex = None
     def forward(self,x):
         rf = self.Featex(x) 
+        self.featex = rf.cpu().numpy()
         rf = self.outlierTrans(rf) 
         bf = self.bnorm(rf) #(batch, channel=64, H, W)
         devf5d = self.nestedAvgFeatex(bf) #(batch, 4, channel=64, H, W)
