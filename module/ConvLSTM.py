@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+from module import Conv2d_modified
 
 
 class ConvLSTMCell(nn.Module):
@@ -28,12 +29,19 @@ class ConvLSTMCell(nn.Module):
         self.kernel_size = kernel_size
         self.padding = kernel_size[0] // 2, kernel_size[1] // 2
         self.bias = bias
-
+        """
         self.conv = nn.Conv2d(in_channels=self.input_dim + self.hidden_dim,
                               out_channels=4 * self.hidden_dim,
                               kernel_size=self.kernel_size,
                               padding=self.padding,
                               bias=self.bias)
+        """
+        self.conv = Conv2d_modified.Conv2d_samepadding(in_channels=self.input_dim + self.hidden_dim,
+                                                       out_channels = 4*self.hidden_dim, 
+                                                       kernel_size=7, 
+                                                       padding="SAME", 
+                                                       bias=self.bias)  
+        
 
     def hardsigmoid(self, matrix):
         t1 = matrix/5 + 0.5
@@ -47,7 +55,7 @@ class ConvLSTMCell(nn.Module):
         combined = torch.cat([input_tensor, h_cur], dim=1)  # concatenate along channel axis
 
         combined_conv = self.conv(combined)
-        cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1)
+        cc_i, cc_f, cc_g, cc_o = torch.split(combined_conv, self.hidden_dim, dim=1)   ################有更改g跟o順序
         i = self.hardsigmoid(cc_i)
         f = self.hardsigmoid(cc_f)
         o = self.hardsigmoid(cc_o)
@@ -60,8 +68,8 @@ class ConvLSTMCell(nn.Module):
 
     def init_hidden(self, batch_size, image_size):
         height, width = image_size
-        return (torch.ones(batch_size, self.hidden_dim, height, width, device=self.conv.weight.device),
-                torch.ones(batch_size, self.hidden_dim, height, width, device=self.conv.weight.device))
+        return (torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv.weight.device),
+                torch.zeros(batch_size, self.hidden_dim, height, width, device=self.conv.weight.device))
 
 
 class ConvLSTM(nn.Module):

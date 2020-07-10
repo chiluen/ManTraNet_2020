@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 
 class NestedWindowAverageFeatExtrator(nn.Module) :
-    '''Custom Keras Layer of NestedWindowAverageFeatExtrator
+    '''Custom Pytorch Layer of NestedWindowAverageFeatExtrator
     '''
     def __init__( self,
                   window_size_list,
@@ -28,7 +28,7 @@ class NestedWindowAverageFeatExtrator(nn.Module) :
         self.lut = dict()
         self.built = True
         self.max_wh, self.max_ww = self._get_max_size()
-        super(NestedWindowAverageFeatExtrator, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         return
     def _initialize_ii_buffer( self, x ) :

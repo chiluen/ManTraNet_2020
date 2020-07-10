@@ -19,27 +19,36 @@ class ManTraNet(nn.Module):
         #layers
         self.outlierTrans = Conv2d_modified.Conv2d_samepadding(256, 64, 1, padding='SAME')  #在optimizer那邊要做apply_normalization
         self.pred = Conv2d_modified.Conv2d_samepadding(8, 1, 7, padding="SAME", bias=True)  
-        self.bnorm = nn.BatchNorm2d(64, affine=False)
+        self.bnorm = nn.BatchNorm2d(64, affine=False, eps=1e-3)
         self.nestedAvgFeatex = NestedWindow.NestedWindowAverageFeatExtrator(window_size_list= self.pool_size_list, 
                                                                                output_mode='5d',
                                                                                minus_original=True) 
         self.glbStd = GlobalStd2D.GlobalStd2D(64)   #input: number of features
         self.cLSTM = ConvLSTM.ConvLSTM(input_dim = 64, hidden_dim = 8, kernel_size = (7, 7), num_layers = 1, batch_first = True, bias = True, return_all_layers = False)
-
+        self.sigmoid = nn.Sigmoid()
     def forward(self,x):
         rf = self.Featex(x) 
         rf = self.outlierTrans(rf) 
         bf = self.bnorm(rf) #(batch, channel=64, H, W)
+        #print(bf[0,0,...])
         devf5d = self.nestedAvgFeatex(bf) #(batch, 4, channel=64, H, W)
+        #print(devf5d[0,0,0,...])
         if self.apply_normalization:
-            sigma = self.glbStd(bf) #(batch, channel, H, W)
+            sigma = self.glbStd(bf) #(batch, channel, H, W)   
             sigma5d = torch.unsqueeze(sigma, 1) 
             devf5d = torch.abs(devf5d / sigma5d) 
+            #print(devf5d[0,0,0,...])
 
+        
         # Convert back to 4d
-        _, last_states = self.cLSTM(devf5d)  #(batch, channel = 8, H, W)
+        #devf5d = torch.ones(1, 4, 64,128,128).cuda()
+        _, last_states = self.cLSTM(devf5d)  
         devf = last_states[0][0] #(batch, channel = 8, H, W)
+        #print(devf[0,0,...])
         pred_out = self.pred(devf) #(batch, channel = 1, H, W)
+        pred_out = self.sigmoid(pred_out)
+
+
         return pred_out
 
 
@@ -66,7 +75,7 @@ def model_load_weights(weight_path, model):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = load_weights.load_weights(weight_path, model)    
     model.to(device)
-    
+
     return model
 
 

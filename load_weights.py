@@ -66,8 +66,9 @@ def _load_cLSTM_weights(layer, f):
     param.data = torch.from_numpy(weight)
     # weight
     param = layer.cell_list[0].conv.weight
-    weight = np.concatenate((weights['kernel'], weights['recurrent_kernel']), axis=2)
+    weight = np.concatenate(( weights['kernel'], weights['recurrent_kernel']), axis=2)
     weight = weight.transpose(3, 2, 0, 1)
+
     assert weight.shape == param.data.shape, \
                 f"cLSTM.weight: Shape doesn't match. Got {param.data.shape} but needs {weight.shape}."
     param.data = torch.from_numpy(weight)
