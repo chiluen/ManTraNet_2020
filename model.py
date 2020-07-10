@@ -30,24 +30,17 @@ class ManTraNet(nn.Module):
         rf = self.Featex(x) 
         rf = self.outlierTrans(rf) 
         bf = self.bnorm(rf) #(batch, channel=64, H, W)
-        #print(bf[0,0,...])
         devf5d = self.nestedAvgFeatex(bf) #(batch, 4, channel=64, H, W)
-        #print(devf5d[0,0,0,...])
         if self.apply_normalization:
             sigma = self.glbStd(bf) #(batch, channel, H, W)   
             sigma5d = torch.unsqueeze(sigma, 1) 
             devf5d = torch.abs(devf5d / sigma5d) 
-            #print(devf5d[0,0,0,...])
 
-        
         # Convert back to 4d
-        #devf5d = torch.ones(1, 4, 64,128,128).cuda()
         _, last_states = self.cLSTM(devf5d)  
         devf = last_states[0][0] #(batch, channel = 8, H, W)
-        #print(devf[0,0,...])
         pred_out = self.pred(devf) #(batch, channel = 1, H, W)
         pred_out = self.sigmoid(pred_out)
-
 
         return pred_out
 
