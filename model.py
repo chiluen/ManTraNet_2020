@@ -45,7 +45,9 @@ class ManTraNet(nn.Module):
         pred_out = self.sigmoid(pred_out)
 
         return pred_out
-
+    def feature_map(self, fm = 'featex'):
+        if fm == 'featex':
+            return self.featex
 
 def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
