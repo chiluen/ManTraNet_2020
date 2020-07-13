@@ -22,7 +22,7 @@ def _split_one_img(img_filepath, height, width, save_dir):
             box = (j, i, j+width, i+height)
             a = im.crop(box)
             s = ImageStat.Stat(a).stddev
-            if s[0] < 32 or s[1] < 32 or s[2] < 32: continue
+            if s[0] < 32 and s[1] < 32 and s[2] < 32: continue
             a.save(os.path.join(save_dir, f'{img_name}_{k}.png'))
             k += 1
 
