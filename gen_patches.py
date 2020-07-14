@@ -36,3 +36,43 @@ def generate_patches(img_dir, save_dir, height, width):
     '''
     for img_filepath in glob.glob(os.path.join(img_dir, '*')):
         _split_one_img(img_filepath, height, width, save_dir)
+
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
+from random  import randrange
+
+# torch dataset, images in img_dir are already patches
+class DresdenDataset(Dataset):
+    def __init__(self, img_dir, transform=None):
+        self.img_paths = glob.glob(os.path.join(img_dir, '*'))
+        self.transform = transform if transform is not None else transforms.ToTensor()
+    def __len__(self):
+        return len(self.img_paths)
+    def __getitem__(self, idx):
+        img = Image.open(self.img_paths[idx])
+        return self.transform(img)
+
+# torch dataset, crop the image when calling __getitem__
+class DresdenDataset(Dataset):
+    def __init__(self, img_dir, height, width, transform=None):
+        self.img_paths = glob.glob(os.path.join(img_dir, '*'))
+        self.height = height
+        self.width = width
+        self.transform = transform if transform is not None else transforms.ToTensor()
+    def __len__(self):
+        return len(self.img_paths)
+    def __getitem__(self, idx):
+        img = Image.open(self.img_paths[idx])
+        a, s = self._random_crop(img)
+        while s[0] < 32 and s[1] < 32 and s[2] < 32:
+            a, s = self._random_crop(img)
+        img = a
+        return self.transform(img)
+    def _random_crop(self, img):
+        img_w, img_h = img.size
+        x = randrange(0, img_w - self.width)
+        y = randrange(0, img_h - self.height)
+        box = (x, y, x + self.width, y + self.height)
+        a = img.crop(box)
+        s = ImageStat.Stat(a).stddev
+        return a, s
