@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import cv2
+from PIL import Image
 import random
 from torchvision import transforms as T
 
@@ -38,32 +39,35 @@ def get_random_crop(image, crop_height, crop_width):
 
     return crop
 
-def mask(mask_folder):
-    masks = os.listdir(mask_folder)
-    pth = mask_folder + random.choice(masks)
-    mk = cv2.imread( pth, cv2.IMREAD_GRAYSCALE)[...,::-1]
-    mk = (1-mk)/255
+class Mask():
+    def __init__(self, mask_folder):
+        self.mask_folder = mask_folder
+        self.masks = os.listdir(mask_folder)
+    def __call__(self):
+        pth = os.path.join(self.mask_folder, random.choice(self.masks))
+        mk = cv2.imread( pth, cv2.IMREAD_GRAYSCALE)[...,::-1]
+        mk = (1-mk)/255
 
-    _,thsh = cv2.threshold(mk, 0.6, 1, cv2.THRESH_BINARY)
+        _,thsh = cv2.threshold(mk, 0.6, 1, cv2.THRESH_BINARY)
 
-    num = random.randint(3, 7)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(num, num))
-    dilated = cv2.dilate(thsh, kernel)
+        num = random.randint(3, 7)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(num, num))
+        dilated = cv2.dilate(thsh, kernel)
 
-    num = [random.randint(-100,100)for i in range(2)]
+        num = [random.randint(-100,100)for i in range(2)]
 
-    shifted = translate(dilated, num[0], num[1])
+        shifted = translate(dilated, num[0], num[1])
 
-    num = random.randint(0, 180)
+        num = random.randint(0, 180)
 
-    rotated = rotate(shifted, num)
-    
-    cropped = get_random_crop(rotated, 256, 256)
-    if np.array_equal(np.zeros((256,256)), cropped):
-        masking = mask(mask_folder)
-    else:
-        masking = cropped
-    return masking
+        rotated = rotate(shifted, num)
+
+        cropped = get_random_crop(rotated, 256, 256)
+        if np.array_equal(np.zeros((256,256)), cropped):
+            masking = mask(mask_folder)
+        else:
+            masking = cropped
+        return masking
 
 # def removal(img_folder = '/home/jayda960825/Documents/Dresden/Dresden_JPEG/',
 #     removal_folder = '/home/jayda960825/Documents/removal/'):
@@ -78,6 +82,30 @@ def mask(mask_folder):
 #         cv2.imwrite(removal_folder + i[:-4] + '.jpg', output)
 #         masking = masking*255
 #         cv2.imwrite(removal_folder+ i[:-4] + '_mask.png', masking)
+
+class Removal():
+    def __init__(self, mask_folder):
+        self.mask = Mask(mask_folder)
+    def __call__(self, img):
+        masking = self.mask(mask_folder)
+        masking = masking.astype('uint8')
+        output = cv2.inpaint(np.uint8(img),masking,3,cv2.INPAINT_NS)
+        return output
+
+class RemoveTransform():
+    def __init__(self, mask_folder):
+        self.removal = Removal(mask_folder)
+    def __call__(self, img):
+        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR) # from PIL Image to cv2
+        img = self.removal(img)
+        return Image.fromarray(img)
+
+# Usage Example
+# from torchvision import transforms
+# data_transforms = transforms.Compose([
+#     RemoveTransform('path/to/mask_folder'),
+#     transforms.ToTensor()
+# ])
 
 def removal(img, mask_folder):
     masking = mask(mask_folder)
