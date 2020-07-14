@@ -41,7 +41,6 @@ def get_random_crop(image, crop_height, crop_width):
 def mask(mask_folder):
     masks = os.listdir(mask_folder)
     pth = mask_folder + random.choice(masks)
-    print(random.choice(masks))
     mk = cv2.imread( pth, cv2.IMREAD_GRAYSCALE)[...,::-1]
     mk = (1-mk)/255
 
@@ -61,7 +60,7 @@ def mask(mask_folder):
     
     cropped = get_random_crop(rotated, 256, 256)
     if np.array_equal(np.zeros((256,256)), cropped):
-        masking = mask()
+        masking = mask(mask_folder)
     else:
         masking = cropped
     return masking
@@ -81,13 +80,15 @@ def mask(mask_folder):
 #         cv2.imwrite(removal_folder+ i[:-4] + '_mask.png', masking)
 
 def removal(img, mask_folder):
-    masking = mask()
+    masking = mask(mask_folder)
     masking = masking.astype('uint8')
-    output = cv2.inpaint(img,masking,3,cv2.INPAINT_NS)
+    output = cv2.inpaint(np.uint8(img),masking,3,cv2.INPAINT_NS)
+    #cv2.imwrite('/home/jayda960825/Desktop/mask.png', masking*255)
     return output
 
-def transform(img, mask_folder = '/home/jayda960825/Documents/irregular_mask/disocclusion_img_mask/'):
+def rm_transform(mask_folder = '/home/jayda960825/Documents/irregular_mask/disocclusion_img_mask/'):
     data_transforms = T.Compose([
         T.Lambda(lambda img: removal(img, mask_folder)),
         T.ToTensor()
     ])
+    return data_transforms
