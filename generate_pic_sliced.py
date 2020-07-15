@@ -1,0 +1,199 @@
+from pycocotools.coco import COCO
+import numpy as np
+import skimage.io as io
+import matplotlib.pyplot as plt
+import cv2
+
+class copy_move_coco():
+    
+    """
+    Usage:
+    json_path = "/home/chiluen/Desktop/coco/annotations/instances_train2017.json"
+    pic_path = "/home/chiluen/Desktop/coco/train2017" 
+    g = copy_move_coco(json_path, pic_path)
+    a,b = g.generate_picture()
+    """
+    
+    def __init__(self, json_path, pic_path):
+        self.json_path = json_path
+        self.pic_path = pic_path
+        self.coco = COCO(self.json_path)
+        
+    def generate_picture(self):
+
+        cats = self.coco.loadCats(self.coco.getCatIds())  
+        nums_cats=[cat['name'] for cat in cats] #總共80種
+        catNms = []
+        imgIds = []
+        while imgIds == []: #有可能找不到2種種類的搭配
+            catNms = []
+            catIds = []
+            for i in np.random.choice(np.arange(80), 2,replace=False): #隨機選出category
+                catNms.append(nums_cats[i])
+            catIds = self.coco.getCatIds(catNms=catNms)
+            imgIds = self.coco.getImgIds(catIds=catIds)
+
+        imgIds = self.coco.getImgIds(imgIds = np.random.choice(imgIds))   ##這個也要隨機
+        img = self.coco.loadImgs([imgIds[np.random.randint(0,len(imgIds))]])[0]
+        #I = io.imread('%s/%s/%s'%("/home/chiluen/Desktop/coco/","train2017",img['file_name'])) #image本身
+        I = io.imread('%s/%s'%(self.pic_path, img['file_name']))
+        #有時候會用到黑白相片
+        try:
+            channel_count = I.shape[2]
+        except:
+            print("Load to gray pic")
+            return _, _
+
+        annIds = self.coco.getAnnIds(imgIds=img['id'], catIds=catIds, iscrowd=None)
+        anns = self.coco.loadAnns(annIds) #bounding box
+
+        ##選最大面積的
+        area = 0
+        object_choose = 0
+        for i in range(len(anns)):
+            if anns[i]['area'] > area:
+                object_choose = i
+
+        try:
+            polygon = anns[object_choose]['segmentation'][0]  ##有時候照片會沒有這個選項
+        except:
+            print("There arn't any segmentation info")
+            return _, _
+
+        polygon = [polygon[i:i+2] for i in range(0,len(polygon),2)]
+        polygon = np.array(polygon, dtype = np.int32)
+        polygon = polygon[np.newaxis,:,:]
+
+        mask = np.zeros(I.shape, dtype=np.uint8)
+
+        ignore_mask_color = (255,)*channel_count #讓它變成彩色
+        cv2.fillPoly(mask, polygon, ignore_mask_color)   #這樣子會讓mask變成黑白剪影
+
+        # apply the mask
+        masked_image = cv2.bitwise_and(I, mask)
+
+
+        def img_resize_large(img, bbox):
+            size = img.shape
+            h, w = size[0], size[1]
+            min_side = 100
+
+            scale = max(w, h) / float(min_side)
+            new_w, new_h = int(w/scale), int(h/scale)
+            box_x = int(bbox[0])
+            box_y = int(bbox[1])
+            box_w = int(bbox[2])
+            box_h = int(bbox[3])
+            crop_img = img[box_y : box_y+box_h, box_x : box_x+box_w]
+
+            resize_img = cv2.resize(crop_img, (new_w, new_h)) #以min_side作為scale,進行縮放
+            # 填充至min_side * min_side
+
+            if new_w % 2 != 0 and new_h % 2 == 0:
+                top, bottom, left, right = (h-new_h)/2, (h-new_h)/2, (w-new_w)/2 + 1, (w-new_w)/2
+            elif new_h % 2 != 0 and new_w % 2 == 0:
+                top, bottom, left, right = (h-new_h)/2 + 1, (h-new_h)/2, (w-new_w)/2, (w-new_w)/2
+            elif new_h % 2 == 0 and new_w % 2 == 0:
+                top, bottom, left, right = (h-new_h)/2, (h-new_h)/2, (w-new_w)/2, (w-new_w)/2
+            else:
+                top, bottom, left, right = (h-new_h)/2 + 1, (h-new_h)/2, (w-new_w)/2 + 1, (w-new_w)/2
+            pad_img = cv2.copyMakeBorder(resize_img, int(top), int(bottom), int(left), int(right), cv2.BORDER_CONSTANT, value=[0,0,0]) #从图像边界向上,下,左,右扩的像素数目
+            pad_img = cv2.resize(pad_img, (w,h)) #有時候會有一點誤差, 用resize校正
+
+            return pad_img
+
+
+        ##不一定要執行, 這都變小
+        def img_resize(img):
+            size = img.shape
+            h, w = size[0], size[1]
+            min_side = 5000
+            if min_side >= h or min_side >= w:
+                min_side = min(h,w)
+
+            scale = max(w, h) / float(min_side)
+            new_w, new_h = int(w/scale), int(h/scale)
+            resize_img = cv2.resize(img, (new_w, new_h)) #以min_side作為scale,進行縮放
+            # 填充至min_side * min_side
+
+
+            if new_w % 2 != 0 and new_h % 2 == 0:
+                top, bottom, left, right = (h-new_h)/2, (h-new_h)/2, (w-new_w)/2 + 1, (w-new_w)/2
+            elif new_h % 2 != 0 and new_w % 2 == 0:
+                top, bottom, left, right = (h-new_h)/2 + 1, (h-new_h)/2, (w-new_w)/2, (w-new_w)/2
+            elif new_h % 2 == 0 and new_w % 2 == 0:
+                top, bottom, left, right = (h-new_h)/2, (h-new_h)/2, (w-new_w)/2, (w-new_w)/2
+            else:
+                top, bottom, left, right = (h-new_h)/2 + 1, (h-new_h)/2, (w-new_w)/2 + 1, (w-new_w)/2
+            pad_img = cv2.copyMakeBorder(resize_img, int(top), int(bottom), int(left), int(right), cv2.BORDER_CONSTANT, value=[0,0,0]) #从图像边界向上,下,左,右扩的像素数目
+            pad_img = cv2.resize(pad_img, (w,h)) #有時候會有一點誤差, 用resize校正
+
+            return pad_img
+
+        def img_rotate(img, angle, center=None, scale=1.0):
+
+            (h, w) = img.shape[:2]
+
+            if center is None:
+                center = (w / 2, h / 2)
+
+            M = cv2.getRotationMatrix2D(center, angle, scale)
+            rotated = cv2.warpAffine(img, M, (w, h))
+
+            return rotated
+
+        def img_move(img, x, y):
+
+            (h, w) = img.shape[:2]
+            M = np.float32([[1, 0, x], [0, 1, y]])
+            shifted = cv2.warpAffine(img, M, (w, h))
+
+            return shifted
+
+
+        #若黑白圖只有黑沒有白, 那就捨棄這一組(代表我move太多)
+        def img_binary(img):
+            _, black_white = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY) #過thershold, 就會轉成白色(255)
+
+            #檢查如果都是黑色, 那就drop這一組
+            Flag = False
+            if np.all(img == black_white):
+                Flag = True
+            return black_white, Flag
+
+        def img_paste(masked_image, I):
+            """
+            概念：
+            先把原圖要放圖案的位置歸零
+            然後再把圖案做成只有圖案那邊有值
+            最後兩者相加就有疊圖效果了
+            """
+
+            img2gray = cv2.cvtColor(masked_image,cv2.COLOR_BGR2GRAY) #把切下來的img轉成gray
+            ret,mask = cv2.threshold(img2gray,0,255,cv2.THRESH_BINARY_INV) #製造白黑
+            mask_inv = cv2.bitwise_not(mask) #製造黑白
+            img1_bg = cv2.bitwise_and(I, I, mask=mask)  #把原圖部份值歸零
+            img2_fg = cv2.bitwise_and(masked_image, masked_image,mask = mask_inv) #把切下來的img製作成黑底彩色圖案
+            dst = cv2.add(img1_bg,img2_fg) #黏上去
+            return dst
+
+        #masked_image = img_resize(masked_image)
+        masked_image = img_resize_large(masked_image, anns[object_choose]['bbox'])
+        masked_image = img_rotate(masked_image, 50)
+        masked_image = img_move(masked_image, 50, -100) #往右上移動
+        ground_truth, not_available_flag = img_binary(masked_image)
+
+
+        if not_available_flag:
+            print('Not available because of moving too much')
+            return _, _
+
+        train_image = img_paste(masked_image, I)
+        """
+        plt.subplot(1, 2, 1)
+        plt.imshow(train_image)
+
+        plt.subplot(1, 2, 2)
+        plt.imshow(ground_truth)
+        """
+        return train_image, ground_truth
