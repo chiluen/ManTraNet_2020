@@ -2,6 +2,7 @@ from PIL import Image
 from PIL import ImageStat
 import os
 import glob
+from removal import Mask
 
 '''
 Example:
@@ -58,7 +59,8 @@ class DresdenDataset(Dataset):
         self.img_paths = glob.glob(os.path.join(img_dir, '*'))
         self.height = height
         self.width = width
-        self.transform = transform if transform is not None else transforms.ToTensor()
+        self.transform = transform
+        self.to_tensor = transforms.ToTensor()
     def __len__(self):
         return len(self.img_paths)
     def __getitem__(self, idx):
@@ -67,7 +69,14 @@ class DresdenDataset(Dataset):
         while s[0] < 32 and s[1] < 32 and s[2] < 32:
             a, s = self._random_crop(img)
         img = a
-        return self.transform(img)
+        if self.transform is not None:
+            img, masking = self.transform(img)
+            masking = self.to_tensor(masking)#; import pdb; pdb.set_trace()
+        img = self.to_tensor(img)
+        if self.transform is not None:
+            return img, masking
+        else:
+            return img
     def _random_crop(self, img):
         img_w, img_h = img.size
         x = randrange(0, img_w - self.width)

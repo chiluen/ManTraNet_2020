@@ -64,7 +64,7 @@ class Mask():
 
         cropped = get_random_crop(rotated, 256, 256)
         if np.array_equal(np.zeros((256,256)), cropped):
-            masking = mask(mask_folder)
+            masking = self.mask(mask_folder)
         else:
             masking = cropped
         return masking
@@ -87,18 +87,18 @@ class Removal():
     def __init__(self, mask_folder):
         self.mask = Mask(mask_folder)
     def __call__(self, img):
-        masking = self.mask(mask_folder)
-        masking = masking.astype('uint8')
-        output = cv2.inpaint(np.uint8(img),masking,3,cv2.INPAINT_NS)
-        return output
+        masking = self.mask()
+        output = cv2.inpaint(np.uint8(img),masking.astype('uint8'),3,cv2.INPAINT_NS)
+        return output, masking
 
 class RemoveTransform():
     def __init__(self, mask_folder):
         self.removal = Removal(mask_folder)
     def __call__(self, img):
         img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR) # from PIL Image to cv2
-        img = self.removal(img)
-        return Image.fromarray(img)
+        img, masking = self.removal(img)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        return Image.fromarray(img), masking
 
 # Usage Example
 # from torchvision import transforms
