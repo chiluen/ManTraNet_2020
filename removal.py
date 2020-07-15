@@ -64,7 +64,7 @@ class Mask():
 
         cropped = get_random_crop(rotated, 256, 256)
         if np.array_equal(np.zeros((256,256)), cropped):
-            masking = self.mask(mask_folder)
+            masking = self.__call__()
         else:
             masking = cropped
         return masking
