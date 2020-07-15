@@ -46,12 +46,20 @@ from random  import randrange
 class DresdenDataset(Dataset):
     def __init__(self, img_dir, transform=None):
         self.img_paths = glob.glob(os.path.join(img_dir, '*'))
-        self.transform = transform if transform is not None else transforms.ToTensor()
+        self.transform = transform
+        self.to_tensor = transforms.ToTensor()
     def __len__(self):
         return len(self.img_paths)
     def __getitem__(self, idx):
         img = Image.open(self.img_paths[idx])
-        return self.transform(img)
+        if self.transform is not None:
+            img, masking = self.transform(img)
+            masking = self.to_tensor(masking)
+        img = self.to_tensor(img)
+        if self.transform is not None:
+            return img, masking
+        else:
+            return img
 
 # torch dataset, crop the image when calling __getitem__
 class DresdenDataset(Dataset):
@@ -71,7 +79,7 @@ class DresdenDataset(Dataset):
         img = a
         if self.transform is not None:
             img, masking = self.transform(img)
-            masking = self.to_tensor(masking)#; import pdb; pdb.set_trace()
+            masking = self.to_tensor(masking)
         img = self.to_tensor(img)
         if self.transform is not None:
             return img, masking
