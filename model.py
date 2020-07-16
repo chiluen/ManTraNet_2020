@@ -3,13 +3,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
-from module import Conv2d_modified, ConvLSTM, create_featex, NestedWindow, GlobalStd2D
+from module import Conv2d_modified, ConvLSTM, create_featex, NestedWindow, GlobalStd2D, ASPP
 import load_weights
-
+import argparse
 
 ##替代 create_manTraNet_model功能
 class ManTraNet(nn.Module):
-    def __init__(self, Featex, pool_size_list=[7,15,31], is_dynamic_shape=True, apply_normalization=True):
+    def __init__(self, Featex, pool_size_list=[7,15,31], is_dynamic_shape=True, apply_normalization=True, OPTS_aspp = False):
         super().__init__()
         self.Featex = Featex
         self.pool_size_list = pool_size_list
@@ -27,9 +27,12 @@ class ManTraNet(nn.Module):
         self.cLSTM = ConvLSTM.ConvLSTM(input_dim = 64, hidden_dim = 8, kernel_size = (7, 7), num_layers = 1, batch_first = True, bias = True, return_all_layers = False)
         self.sigmoid = nn.Sigmoid()
         self.featex = None
+        self.aspp = ASPP.ASPP(2)
+        self.OPTS_aspp = OPTS_aspp
     def forward(self,x):
         rf = self.Featex(x) 
-        self.featex = rf.cpu().numpy()
+        aspp_temp = rf
+        self.featex = rf.detach().cpu().numpy()
         rf = self.outlierTrans(rf) 
         bf = self.bnorm(rf) #(batch, channel=64, H, W)
         devf5d = self.nestedAvgFeatex(bf) #(batch, 4, channel=64, H, W)
@@ -44,12 +47,16 @@ class ManTraNet(nn.Module):
         pred_out = self.pred(devf) #(batch, channel = 1, H, W)
         pred_out = self.sigmoid(pred_out)
 
+        ##temp setting
+        if self.OPTS_aspp:
+            pred_out = self.aspp(aspp_temp)
+
         return pred_out
     def feature_map(self, fm = 'featex'):
         if fm == 'featex':
             return self.featex
 
-def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
+def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31], OPTS_aspp = False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     type_idx = IMC_model_idx if IMC_model_idx < 4 else 2
     Featex = create_featex.Featex_vgg16_base(type_idx)
@@ -64,7 +71,7 @@ def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
             ly.trainable = False  ##也沒有這個選項
             print("INFO: freeze", ly.name)
     """
-    model = ManTraNet(Featex, pool_size_list=window_size_list, is_dynamic_shape=True, apply_normalization=True)
+    model = ManTraNet(Featex, pool_size_list=window_size_list, is_dynamic_shape=True, apply_normalization=True, OPTS_aspp=OPTS_aspp)
     return model
 
 
@@ -74,5 +81,8 @@ def model_load_weights(weight_path, model):
     model.to(device)
 
     return model
+
+
+
 
 
