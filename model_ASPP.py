@@ -12,22 +12,6 @@ class ManTraNet(nn.Module):
     def __init__(self, Featex, pool_size_list=[7,15,31], is_dynamic_shape=True, apply_normalization=True):
         super().__init__()
         self.Featex = Featex
-        self.pool_size_list = pool_size_list
-        self.is_dynamic_shape = is_dynamic_shape
-        self.apply_normalization = apply_normalization
-
-        #layers
-        self.outlierTrans = Conv2d_modified.Conv2d_samepadding(256, 64, 1, padding='SAME')  #在optimizer那邊要做apply_normalization
-        self.pred = Conv2d_modified.Conv2d_samepadding(8, 1, 7, padding="SAME", bias=True)  
-        self.bnorm = nn.BatchNorm2d(64, affine=False, eps=1e-3)
-        self.nestedAvgFeatex = NestedWindow.NestedWindowAverageFeatExtrator(window_size_list= self.pool_size_list, 
-                                                                               output_mode='5d',
-                                                                               minus_original=True) 
-        self.glbStd = GlobalStd2D.GlobalStd2D(64)   #input: number of features
-        self.cLSTM = ConvLSTM.ConvLSTM(input_dim = 64, hidden_dim = 8, kernel_size = (7, 7), num_layers = 1, batch_first = True, bias = True, return_all_layers = False)
-        self.sigmoid = nn.Sigmoid()
-        self.featex = None
-        self.clstm = None
         self.aspp = ASPP.ASPP(2)
     def forward(self,x):
         rf = self.Featex(x) 
