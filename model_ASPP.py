@@ -25,7 +25,7 @@ def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
     Featex = create_featex.Featex_vgg16_base(type_idx)
     if freeze_featex:
         print("INFO: freeze feature extraction part, trainable=False")
-        for p in model.Featex.parameters():
+        for p in Featex.parameters():
             p.requires_grad = False
     else:
         print ("INFO: unfreeze feature extraction part, trainable=True")
