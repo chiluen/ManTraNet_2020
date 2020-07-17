@@ -12,7 +12,7 @@ class ManTraNet(nn.Module):
     def __init__(self, Featex, pool_size_list=[7,15,31], is_dynamic_shape=True, apply_normalization=True):
         super().__init__()
         self.Featex = Featex
-        self.aspp = ASPP.ASPP(2)
+        self.aspp = ASPP.ASPP(1)
     def forward(self,x):
         rf = self.Featex(x) 
         pred_out = self.aspp(rf)
