@@ -39,9 +39,9 @@ def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
     return model
 
 
-def model_load_weights(weight_path, model):
+def model_load_weights(weight_path, model, Featex_only=True):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = load_weights.load_weights(weight_path, model)    
+    model = load_weights.load_weights(weight_path, model, Featex_only)    
     model.to(device)
 
     return model
