@@ -33,7 +33,7 @@ class ManTraNet(nn.Module):
     def forward(self,x):
         rf = self.Featex(x) 
         aspp_temp = rf
-        self.featex = rf.detach().cpu().numpy()
+        self.featex = rf
         rf = self.outlierTrans(rf) 
         bf = self.bnorm(rf) #(batch, channel=64, H, W)
         devf5d = self.nestedAvgFeatex(bf) #(batch, 4, channel=64, H, W)
