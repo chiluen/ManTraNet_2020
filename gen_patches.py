@@ -5,8 +5,13 @@ import glob
 from removal import Mask
 
 '''
-Example:
+Usage Example:
+
+# to split all images in drsden folder and save it to another folder:
 generate_patches('Dresden/Dresden_JPEG', 'Dresden_patches', 256, 256)
+
+# to see the example of using DresdenDataset, one can refer to the 
+# usage example in transforms_enhance.py
 '''
 
 # split an image into several blocks and save to a directory
