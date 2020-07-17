@@ -35,7 +35,7 @@ class ManTraNet(nn.Module):
 
         return pred_out
 
-def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31], OPTS_aspp = False):
+def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     type_idx = IMC_model_idx if IMC_model_idx < 4 else 2
     Featex = create_featex.Featex_vgg16_base(type_idx)
@@ -50,7 +50,7 @@ def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31], OPTS_
             ly.trainable = False  ##也沒有這個選項
             print("INFO: freeze", ly.name)
     """
-    model = ManTraNet(Featex, pool_size_list=window_size_list, is_dynamic_shape=True, apply_normalization=True, OPTS_aspp=OPTS_aspp)
+    model = ManTraNet(Featex, pool_size_list=window_size_list, is_dynamic_shape=True, apply_normalization=True)
     return model
 
 
