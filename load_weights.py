@@ -99,10 +99,13 @@ def _load_outlierTrans_weights(layer, f):
         param.data = torch.from_numpy(weight)
     return layer
 
-def load_weights(weight_filepath, model):
+def load_weights(weight_filepath, model, Featex_only=False):
     f = h5py.File(weight_filepath, 'r')
     # Featex
     model.Featex = _load_Featex_weights(model.Featex, f['Featex'])
+    if Featex_only:
+        return model
+    
     layer_names = ['bnorm', 'pred', 'cLSTM', 'glbStd', 'outlierTrans']
     load_weight_ftns = [_load_bnorm_weights,
                        _load_pred_weights,
