@@ -6,6 +6,24 @@ from skimage.util import random_noise
 import numpy as np
 from removal import Mask
 
+'''
+Usage Example:
+
+from transforms_enhance import *
+import gen_patches
+
+man_list = [Blur(),
+            MorphOps(),
+            Noise(),
+            Quantize(),
+            AutoContrast(),
+            Equilize(),
+            Compress()]
+transform = Enhance(man_list, 'path/to/mask_dir')
+dataset = gen_patches.DresdenDataset('path/to/dresdon_dir', 256, 256, transform=transform)
+img, masking = dataset[333]
+'''
+
 class Enhance():
     def __init__(self, man_list, mask_dir):
         self.man_list = man_list
