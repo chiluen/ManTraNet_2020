@@ -27,6 +27,7 @@ class ManTraNet(nn.Module):
         self.cLSTM = ConvLSTM.ConvLSTM(input_dim = 64, hidden_dim = 8, kernel_size = (7, 7), num_layers = 1, batch_first = True, bias = True, return_all_layers = False)
         self.sigmoid = nn.Sigmoid()
         self.featex = None
+        self.clstm = None
         self.aspp = ASPP.ASPP(2)
         self.OPTS_aspp = OPTS_aspp
     def forward(self,x):
@@ -44,6 +45,7 @@ class ManTraNet(nn.Module):
         # Convert back to 4d
         _, last_states = self.cLSTM(devf5d)  
         devf = last_states[0][0] #(batch, channel = 8, H, W)
+        self.clstm = devf.detach().cpu().numpy()
         pred_out = self.pred(devf) #(batch, channel = 1, H, W)
         pred_out = self.sigmoid(pred_out)
 
@@ -55,6 +57,8 @@ class ManTraNet(nn.Module):
     def feature_map(self, fm = 'featex'):
         if fm == 'featex':
             return self.featex
+        elif fm == 'clstm':
+            return self.clstm
 
 def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31], OPTS_aspp = False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
