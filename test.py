@@ -1,4 +1,5 @@
 if __name__ == '__main__':
+    # testing GPU memory
     from model_ASPP import *
     m = create_model(2, True)
     m = model_load_weights("/home/jayda960825/ManTraNet_2020/pretrained_weights/ManTraNet_Ptrain4.h5", m)
