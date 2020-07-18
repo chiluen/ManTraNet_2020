@@ -42,7 +42,7 @@ class ASPP(nn.Module):
         out_img = self.avg_pool(feature_map) # (shape: (batch_size, 256, 1, 1))
         out_img = F.relu(self.bn_conv_1x1_2(self.conv_1x1_2(out_img))) # (shape: (batch_size, 128, 1, 1))
         out_img = F.interpolate(out_img, size=(feature_map_h, feature_map_w), mode='bilinear', align_corners = True) # (shape: (batch_size, 128, h, w))
-
+                 #F.upsample has deprecated, turning to F.interpolate
         out = torch.cat([out_1x1, out_3x3_1, out_3x3_2, out_3x3_3, out_img], 1) # (shape: (batch_size, 640, h, w))
         out = F.relu(self.bn_conv_1x1_3(self.conv_1x1_3(out))) # (shape: (batch_size, 128, h, w))
         out = self.conv_1x1_4(out) # (shape: (batch_size, num_classes=2, h, w))
