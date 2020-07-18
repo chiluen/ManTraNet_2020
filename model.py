@@ -54,6 +54,8 @@ class ManTraNet(nn.Module):
             pred_out = self.aspp(aspp_temp)
 
         return pred_out
+
+        #print fm
     def feature_map(self, fm = 'featex'):
         if fm == 'featex':
             return self.featex
