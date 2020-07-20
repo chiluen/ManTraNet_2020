@@ -21,7 +21,10 @@ class CopyMoveDataset(Dataset):
         self.json_path = json_path
         self.pic_path = pic_path
         self.coco = COCO(self.json_path)
-        self.to_tensor = transforms.ToTensor()
+        self.transform = transforms.Compose([
+            transforms.RandomCrop((256, 256), padding_mode=symmetric),
+            transforms.ToTensor()
+        ])
 
     def __len__(self):
         return 100000
@@ -29,7 +32,7 @@ class CopyMoveDataset(Dataset):
     def __getitem__(self, idx):
         img, masking =  self.generate_picture()
         masking = masking[:, :, :1]
-        return self.to_tensor(img), self.to_tensor(masking)
+        return self.transform(img), self.transform(masking)
         
     def generate_picture(self):
 
@@ -217,7 +220,10 @@ class SplicingDataset():
         self.json_path = json_path
         self.pic_path = pic_path
         self.coco = COCO(self.json_path)
-        self.to_tensor = transforms.ToTensor()
+        self.transform = transforms.Compose([
+            transforms.RandomCrop((256, 256), padding_mode=symmetric),
+            transforms.ToTensor()
+        ])
 
     def __len__(self):
         return 100000
@@ -225,7 +231,7 @@ class SplicingDataset():
     def __getitem__(self, idx):
         img, masking =  self.generate_picture()
         masking = masking[:, :, :1]
-        return self.to_tensor(img), self.to_tensor(masking)
+        return self.transform(img), self.transform(masking)
         
     def generate_picture(self):
         """
