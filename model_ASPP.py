@@ -19,7 +19,7 @@ class ManTraNet(nn.Module):
         rf = self.Featex(x) 
         pp = self.aspp(rf)
         pred_out = self.unet(pp)
-
+        pred_out = torch.sigmoid(pred_out)
         return pred_out
 
 def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
