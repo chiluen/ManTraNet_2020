@@ -213,14 +213,14 @@ class copy_move_coco():
         train_image = img_paste(masked_image, I)
         
     
-        
+        """
         
         plt.subplot(1, 2, 1)
         plt.imshow(train_image)
 
         plt.subplot(1, 2, 2)
         plt.imshow(ground_truth)
-        
+        """
         return train_image, ground_truth
 
 
