@@ -30,6 +30,8 @@ class CopyMoveDataset(Dataset):
 
     def __getitem__(self, idx):
         img, masking =  self.generate_picture()
+        while img.shape[0] < self.height or img.shape[1] < self.width:
+            img, masking =  self.generate_picture()
         masking = masking[:, :, :1]
         img, masking = self.to_tensor(img), self.to_tensor(masking)
         # crop to (height, width)
@@ -66,7 +68,7 @@ class CopyMoveDataset(Dataset):
             channel_count = I.shape[2]
         except:
             print("Load to gray pic")
-            return _, _
+            return self.generate_picture()
 
         annIds = self.coco.getAnnIds(imgIds=img['id'], catIds=catIds, iscrowd=None)
         anns = self.coco.loadAnns(annIds) #bounding box
@@ -82,7 +84,7 @@ class CopyMoveDataset(Dataset):
             polygon = anns[object_choose]['segmentation'][0]  ##有時候照片會沒有這個選項
         except:
             print("There arn't any segmentation info")
-            return _, _
+            return self.generate_picture()
 
         polygon = [polygon[i:i+2] for i in range(0,len(polygon),2)]
         polygon = np.array(polygon, dtype = np.int32)
@@ -237,6 +239,8 @@ class SplicingDataset():
 
     def __getitem__(self, idx):
         img, masking =  self.generate_picture()
+        while img.shape[0] < self.height or img.shape[1] < self.width:
+            img, masking = self.generate_picture()
         masking = masking[:, :, :1]
         img, masking = self.to_tensor(img), self.to_tensor(masking)
         # crop to (height, width)
@@ -295,7 +299,7 @@ class SplicingDataset():
             channel_count = I_src.shape[2] #檢查src是不是也是gray
         except:
             print("Load to gray pic")
-            return _, _
+            return self.generate_picture()
 
         annIds = self.coco.getAnnIds(imgIds=img['id'], catIds=catIds, iscrowd=None)
         anns = self.coco.loadAnns(annIds) #bounding box
@@ -311,7 +315,7 @@ class SplicingDataset():
             polygon = anns[object_choose]['segmentation'][0]  ##有時候照片會沒有這個選項
         except:
             print("There arn't any segmentation info")
-            return _, _
+            return self.generate_picture()
 
         polygon = [polygon[i:i+2] for i in range(0,len(polygon),2)]
         polygon = np.array(polygon, dtype = np.int32)
