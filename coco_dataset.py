@@ -1,3 +1,4 @@
+import random
 from torch.utils.data import Dataset
 from torchvision import transforms
 from pycocotools.coco import COCO
@@ -8,7 +9,6 @@ import cv2
 
 '''
 Usage Example
-
 json_path = "/home/chiluen/Desktop/coco/annotations/instances_train2017.json"
 pic_path = "/home/chiluen/Desktop/coco/train2017" 
 dataset = CopyMoveDataset(json_path, pic_path)
@@ -17,14 +17,13 @@ img, masking = dataset[0]
 '''
 
 class CopyMoveDataset(Dataset):    
-    def __init__(self, json_path, pic_path):
+    def __init__(self, json_path, pic_path, height, width):
         self.json_path = json_path
         self.pic_path = pic_path
+        self.height = height
+        self.width = width
         self.coco = COCO(self.json_path)
-        self.transform = transforms.Compose([
-            transforms.RandomCrop((256, 256), padding_mode=symmetric),
-            transforms.ToTensor()
-        ])
+        self.to_tensor = transforms.ToTensor()
 
     def __len__(self):
         return 100000
@@ -32,8 +31,18 @@ class CopyMoveDataset(Dataset):
     def __getitem__(self, idx):
         img, masking =  self.generate_picture()
         masking = masking[:, :, :1]
-        return self.transform(img), self.transform(masking)
-        
+        img, masking = self.to_tensor(img), self.to_tensor(masking)
+        # crop to (height, width)
+        img_h, img_w = img.shape[-2], img.shape[-1]
+        start_h = random.randint(0, img_h - self.height - 1)
+        start_w = random.randint(0, img_w - self.width - 1)
+        while masking[:, start_h:start_h+self.height, start_w:start_w+self.width].sum() == 0:
+            start_h = random.randint(0, img_h - self.height - 1)
+            start_w = random.randint(0, img_w - self.width - 1)
+        img = img[:, start_h:start_h+self.height, start_w:start_w+self.width]
+        masking = masking[:, start_h:start_h+self.height, start_w:start_w+self.width]
+        return img, masking
+
     def generate_picture(self):
 
         cats = self.coco.loadCats(self.coco.getCatIds())  
@@ -207,7 +216,6 @@ class CopyMoveDataset(Dataset):
         """
         plt.subplot(1, 2, 1)
         plt.imshow(train_image)
-
         plt.subplot(1, 2, 2)
         plt.imshow(ground_truth)
         """
@@ -216,14 +224,13 @@ class CopyMoveDataset(Dataset):
 
 
 class SplicingDataset():
-    def __init__(self, json_path, pic_path):
+    def __init__(self, json_path, pic_path, height, width):
         self.json_path = json_path
         self.pic_path = pic_path
+        self.height = height
+        self.width = width
         self.coco = COCO(self.json_path)
-        self.transform = transforms.Compose([
-            transforms.RandomCrop((256, 256), padding_mode=symmetric),
-            transforms.ToTensor()
-        ])
+        self.to_tensor = transforms.ToTensor()
 
     def __len__(self):
         return 100000
@@ -231,18 +238,28 @@ class SplicingDataset():
     def __getitem__(self, idx):
         img, masking =  self.generate_picture()
         masking = masking[:, :, :1]
-        return self.transform(img), self.transform(masking)
-        
+        img, masking = self.to_tensor(img), self.to_tensor(masking)
+        # crop to (height, width)
+        img_h, img_w = img.shape[-2], img.shape[-1]
+        start_h = random.randint(0, img_h - self.height - 1)
+        start_w = random.randint(0, img_w - self.width - 1)
+        while masking[:, start_h:start_h+self.height, start_w:start_w+self.width].sum() == 0:
+            start_h = random.randint(0, img_h - self.height - 1)
+            start_w = random.randint(0, img_w - self.width - 1)
+        img = img[:, start_h:start_h+self.height, start_w:start_w+self.width]
+        masking = masking[:, start_h:start_h+self.height, start_w:start_w+self.width]
+        return img, masking
+
     def generate_picture(self):
         """
         I : sliced image
         src_I : src image（要被貼上的image）
         
         """
-        
+
         cats = self.coco.loadCats(self.coco.getCatIds())  
         nums_cats=[cat['name'] for cat in cats] #總共80種
-        
+
         ##sliced image
         catNms = []
         imgIds = []
@@ -257,7 +274,7 @@ class SplicingDataset():
         imgIds = self.coco.getImgIds(imgIds = np.random.choice(imgIds))   ##這個也要隨機
         img = self.coco.loadImgs([imgIds[np.random.randint(0,len(imgIds))]])[0]
         I = io.imread('%s/%s'%(self.pic_path, img['file_name']))
-        
+
         ##src_image
         catNms_src = []
         imgIds_src = []
@@ -271,7 +288,7 @@ class SplicingDataset():
         imgIds_src = self.coco.getImgIds(imgIds = np.random.choice(imgIds_src))
         img_src = self.coco.loadImgs([imgIds_src[np.random.randint(0,len(imgIds_src))]])[0]
         I_src = io.imread('%s/%s'%(self.pic_path, img_src['file_name']))
-        
+
         #有時候會用到黑白相片
         try:
             channel_count = I.shape[2]
@@ -314,7 +331,7 @@ class SplicingDataset():
             h, w = size[0], size[1]
             size_src = img_src.shape
             h_src, w_src = size_src[0], size_src[1]   
-            
+
             min_side = 100
 
             scale = max(w, h) / float(min_side)
@@ -432,8 +449,7 @@ class SplicingDataset():
         """
         plt.subplot(1, 2, 1)
         plt.imshow(train_image)
-
         plt.subplot(1, 2, 2)
         plt.imshow(ground_truth)
         """
-        return train_image, ground_truth
+        return train_image, ground_truth 
