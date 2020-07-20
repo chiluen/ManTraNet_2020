@@ -8,8 +8,8 @@ class copy_move_coco():
     
     """
     Usage:
-    json_path = "/home/chiluen/Desktop/coco/annotations/instances_train2017.json"
-    pic_path = "/home/chiluen/Desktop/coco/train2017" 
+    json_path = "/home/chiluen/Desktop/coco/annotations/image_info_test2017.json"
+    pic_path = "/home/chiluen/Desktop/coco/test2017" 
     g = copy_move_coco(json_path, pic_path)
     a,b = g.generate_picture()
     """
@@ -18,6 +18,7 @@ class copy_move_coco():
         self.json_path = json_path
         self.pic_path = pic_path
         self.coco = COCO(self.json_path)
+        self.exist_pic = []
         
     def generate_picture(self):
 
@@ -35,15 +36,21 @@ class copy_move_coco():
 
         imgIds = self.coco.getImgIds(imgIds = np.random.choice(imgIds))   ##這個也要隨機
         img = self.coco.loadImgs([imgIds[np.random.randint(0,len(imgIds))]])[0]
-        #I = io.imread('%s/%s/%s'%("/home/chiluen/Desktop/coco/","train2017",img['file_name'])) #image本身
         I = io.imread('%s/%s'%(self.pic_path, img['file_name']))
+        
         #有時候會用到黑白相片
         try:
             channel_count = I.shape[2]
         except:
             print("Load to gray pic")
             return _, _
-
+        
+        ##確認是否load過
+        if img['id'] in self.exist_pic:
+            print("Repeat ID")
+            return _,_
+        
+        self.exist_pic.append(img['id'])
         annIds = self.coco.getAnnIds(imgIds=img['id'], catIds=catIds, iscrowd=None)
         anns = self.coco.loadAnns(annIds) #bounding box
 
@@ -52,7 +59,13 @@ class copy_move_coco():
         object_choose = 0
         for i in range(len(anns)):
             if anns[i]['area'] > area:
-                object_choose = i
+                area = anns[i]['area']
+                object_choose = i 
+                
+        if area <= 6000:
+            print("Area is too small")
+            return _,_
+        
 
         try:
             polygon = anns[object_choose]['segmentation'][0]  ##有時候照片會沒有這個選項
@@ -154,7 +167,7 @@ class copy_move_coco():
         #若黑白圖只有黑沒有白, 那就捨棄這一組(代表我move太多)
         def img_binary(img):
             _, black_white = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY) #過thershold, 就會轉成白色(255)
-
+            
             #檢查如果都是黑色, 那就drop這一組
             Flag = False
             if np.all(img == black_white):
@@ -178,35 +191,46 @@ class copy_move_coco():
             return dst
 
         #masked_image = img_resize(masked_image)
-        masked_image = img_resize_large(masked_image, anns[object_choose]['bbox'])
+        #masked_image = img_resize_large(masked_image, anns[object_choose]['bbox'])
         masked_image = img_rotate(masked_image, 50)
-        masked_image = img_move(masked_image, 50, -100) #往右上移動
+        masked_image = img_move(masked_image, np.random.randint(-50,50), np.random.randint(-150,150)) #隨機移動   
+    
+    
+        ##erosion: 把圖片黑邊消除
+        ret,masked_image_temp = cv2.threshold(masked_image,0,255,cv2.THRESH_BINARY)
+        erosion = cv2.erode(masked_image_temp,kernel = (3,3), iterations = 5)
+        ret, erosion = cv2.threshold(erosion,0,1,cv2.THRESH_BINARY)
+        ##確認erosion是否都是0,1
+        
+        masked_image = np.multiply(masked_image, erosion)
+        
         ground_truth, not_available_flag = img_binary(masked_image)
-
 
         if not_available_flag:
             print('Not available because of moving too much')
             return _, _
 
         train_image = img_paste(masked_image, I)
-        """
+        
+    
+        
+        
         plt.subplot(1, 2, 1)
         plt.imshow(train_image)
 
         plt.subplot(1, 2, 2)
         plt.imshow(ground_truth)
-        """
+        
         return train_image, ground_truth
-
 
 
 class sliced_coco():
     
     """
     Usage:
-    json_path = "/home/chiluen/Desktop/coco/annotations/instances_train2017.json"
-    pic_path = "/home/chiluen/Desktop/coco/train2017" 
-    g = sliced_coco(json_path, pic_path)
+    json_path = "/home/chiluen/Desktop/coco/annotations/image_info_test2017.json"
+    pic_path = "/home/chiluen/Desktop/coco/test2017" 
+    g = copy_move_coco(json_path, pic_path)
     a,b = g.generate_picture()
     """
     
@@ -214,18 +238,12 @@ class sliced_coco():
         self.json_path = json_path
         self.pic_path = pic_path
         self.coco = COCO(self.json_path)
+        self.exist_pic = []
         
     def generate_picture(self):
-        """
-        I : sliced image
-        src_I : src image（要被貼上的image）
-        
-        """
-        
+
         cats = self.coco.loadCats(self.coco.getCatIds())  
         nums_cats=[cat['name'] for cat in cats] #總共80種
-        
-        ##sliced image
         catNms = []
         imgIds = []
         while imgIds == []: #有可能找不到2種種類的搭配
@@ -235,10 +253,10 @@ class sliced_coco():
                 catNms.append(nums_cats[i])
             catIds = self.coco.getCatIds(catNms=catNms)
             imgIds = self.coco.getImgIds(catIds=catIds)
-
         imgIds = self.coco.getImgIds(imgIds = np.random.choice(imgIds))   ##這個也要隨機
         img = self.coco.loadImgs([imgIds[np.random.randint(0,len(imgIds))]])[0]
         I = io.imread('%s/%s'%(self.pic_path, img['file_name']))
+        
         
         ##src_image
         catNms_src = []
@@ -254,6 +272,7 @@ class sliced_coco():
         img_src = self.coco.loadImgs([imgIds_src[np.random.randint(0,len(imgIds_src))]])[0]
         I_src = io.imread('%s/%s'%(self.pic_path, img_src['file_name']))
         
+        
         #有時候會用到黑白相片
         try:
             channel_count = I.shape[2]
@@ -261,7 +280,14 @@ class sliced_coco():
         except:
             print("Load to gray pic")
             return _, _
-
+        
+        ##確認是否load過
+        if img_src['id'] in self.exist_pic:
+            print("Repeat ID")
+            return _,_
+        
+        self.exist_pic.append(img_src['id'])
+        
         annIds = self.coco.getAnnIds(imgIds=img['id'], catIds=catIds, iscrowd=None)
         anns = self.coco.loadAnns(annIds) #bounding box
 
@@ -270,7 +296,13 @@ class sliced_coco():
         object_choose = 0
         for i in range(len(anns)):
             if anns[i]['area'] > area:
-                object_choose = i
+                area = anns[i]['area']
+                object_choose = i 
+                
+        if area <= 6000:
+            print("Area is too small")
+            return _,_
+        
 
         try:
             polygon = anns[object_choose]['segmentation'][0]  ##有時候照片會沒有這個選項
@@ -375,7 +407,7 @@ class sliced_coco():
         #若黑白圖只有黑沒有白, 那就捨棄這一組(代表我move太多)
         def img_binary(img):
             _, black_white = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY) #過thershold, 就會轉成白色(255)
-
+            
             #檢查如果都是黑色, 那就drop這一組
             Flag = False
             if np.all(img == black_white):
@@ -401,16 +433,25 @@ class sliced_coco():
         #masked_image = img_resize(masked_image)
         masked_image = img_resize_large(masked_image, I_src, anns[object_choose]['bbox'])
         masked_image = img_rotate(masked_image, 50)
-        masked_image = img_move(masked_image, 50, -100) #往右上移動
+        masked_image = img_move(masked_image, np.random.randint(-50,50), np.random.randint(-150,150)) #隨機移動   
+    
+    
+        ##erosion: 把圖片黑邊消除
+        ret,masked_image_temp = cv2.threshold(masked_image,0,255,cv2.THRESH_BINARY)
+        erosion = cv2.erode(masked_image_temp,kernel = (3,3), iterations = 5)
+        ret, erosion = cv2.threshold(erosion,0,1,cv2.THRESH_BINARY)
+        ##確認erosion是否都是0,1
+        
+        masked_image = np.multiply(masked_image, erosion)
+        
         ground_truth, not_available_flag = img_binary(masked_image)
-
 
         if not_available_flag:
             print('Not available because of moving too much')
             return _, _
 
-        #train_image = img_paste(masked_image, I)
         train_image = img_paste(masked_image, I_src)
+        
         """
         plt.subplot(1, 2, 1)
         plt.imshow(train_image)
