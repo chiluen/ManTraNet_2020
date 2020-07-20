@@ -67,7 +67,7 @@ class Mask():
             masking = self.__call__()
         else:
             masking = cropped
-        return masking
+        return masking.astype('float32')
 
 # def removal(img_folder = '/home/jayda960825/Documents/Dresden/Dresden_JPEG/',
 #     removal_folder = '/home/jayda960825/Documents/removal/'):
