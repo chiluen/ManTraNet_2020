@@ -100,7 +100,7 @@ class Conv2d_samepadding(_ConvNd):
     
 
     def apply_constraint(self):  #拉到外面, 等到optimize之後再做
-        self.weight = self.weight/torch.norm(self.weight)
+        self.weight.data = self.weight.data/torch.norm(self.weight.data)
 
 
 # custom con2d, because pytorch don't have "padding='same'" option.
