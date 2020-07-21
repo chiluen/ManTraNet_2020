@@ -22,6 +22,6 @@ class GlobalStd2D(nn.Module):
         x_std = torch.max(x_std, self.min_std_val/10. + self.min_std)
         return x_std
     def apply_clamp(self):
-        self.min_std = self.min_std.data.clamp(0,float("inf"))
+        self.min_std.data = self.min_std.data.clamp(0,float("inf"))
     #def compute_output_shape(self, input_shape):
         #return (input_shape[0], 1, 1, input_shape[-1]) 
