@@ -53,7 +53,8 @@ class BayarConstraint() :
         out_channels, in_channels, kernel_height, kernel_width = w.size()
         m = np.zeros((out_channels, in_channels, kernel_height, kernel_width)).astype('float32')
         m[:, :, kernel_height//2, kernel_width//2] = 1.
-        self.mask = torch.tensor(m)
+        device = device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.mask = torch.tensor(m, device=device)
         return
     def __call__(self, w) :
         if self.mask is None :
