@@ -45,7 +45,7 @@ class trainer():
         return mantranet
     
 
-    def train(self, model, optim, num_iter, iters, vals, criterion, epochs = 30, valid_loss_min = np.Inf):
+    def train(self, model, optim, num_iter, iters, vals, criterion, scheduler=None, epochs = 30, valid_loss_min = np.Inf):
         for epoch in range(epochs):
             model.train()
             for i in range(num_iter):
@@ -89,6 +89,8 @@ class trainer():
                 valid_loss += loss.item()
                 
             valid_loss = valid_loss / self.num_imgs
+            if scheduler:
+                scheduler.step(valid_loss)
             if valid_loss <= valid_loss_min:
                     print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min, valid_loss))
                     torch.save(model.state_dict(), os.path.join(".", "checkpoints",str(epoch)+'_mantra.pth'))
@@ -139,6 +141,7 @@ class trainer():
         #--------train----------#
         mantranet = self.prepare_model()
         optim = torch.optim.Adam(mantranet.parameters(), lr = self.lr)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, factor=0.5, patience=20)
         criterion = nn.BCELoss()
         iters = {'rm': rm_train_iter,
                 'en': en_train_iter,
@@ -150,7 +153,7 @@ class trainer():
                 'cp': cp_val,
                 'sp': sp_val}
 
-        self.train(mantranet, optim, self.iter, iters, vals, criterion, self.epoch)
+        self.train(mantranet, optim, self.iter, iters, vals, criterion, scheduler, self.epoch)
 
 
 if __name__ == '__main__':
