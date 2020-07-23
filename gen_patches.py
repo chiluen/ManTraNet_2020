@@ -69,7 +69,7 @@ class DresdenDataset(Dataset):
 # torch dataset, crop the image when calling __getitem__
 class DresdenDataset(Dataset):
     def __init__(self, img_dir, height, width, transform=None):
-        self.img_paths = glob.glob(os.path.join(img_dir, '*.JPG'))
+        self.img_paths = glob.glob(os.path.join(img_dir,  '*.JPG' ))
         self.height = height
         self.width = width
         self.transform = transform
