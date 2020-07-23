@@ -18,7 +18,7 @@ import argparse
 """
 Put all the data and pretrained model in this folder
 """
-path_root = "/media/chiluen/HDD/"
+path_root = "./mydata"
 writer = SummaryWriter('log')
 
 class trainer():
@@ -70,7 +70,8 @@ class trainer():
 
             model.eval()
             valid_loss = 0.0
-            for i in tqdm(range(self.num_imgs)):
+            print("#---Enter validation---#")
+            for i in tqdm(range(int(self.num_imgs/10))):
 
                 cp_img, cp_masking = vals['cp'].__getitem__(i)
                 sp_img, sp_masking = vals['sp'].__getitem__(i)
@@ -89,8 +90,8 @@ class trainer():
                 
             valid_loss = valid_loss / self.num_imgs
             if valid_loss <= valid_loss_min:
-                    print('validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min, valid_loss))
-                    torch.save(model.state_dict(), os.path.join(path_root, "checkpoints",str(epoch)+'_mantra.pth'))
+                    print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min, valid_loss))
+                    torch.save(model.state_dict(), os.path.join(".", "checkpoints",str(epoch)+'_mantra.pth'))
                     valid_loss_min = valid_loss
     
     def run(self):
