@@ -15,21 +15,24 @@ import os
 from tqdm import tqdm
 import numpy as np
 import argparse
+import ipdb
 
 """
 Put all the data and pretrained model in this folder
 """
-path_root = "./mydata"
+path_root = "/media/chiluen/HDD"
 writer = SummaryWriter('log')
 
 class trainer():
-    def __init__(self, epoch, iteration, lr):
+    def __init__(self, epoch, iteration, lr, finetune):
         self.epoch = epoch
         self.iter = iteration
         self.lr = lr
+        self.finetune = finetune
 
         self.global_step = 0
         self.num_imgs = 0
+        
         
     def infinite_iter(self, dataloader):
         it = iter(dataloader)
@@ -41,8 +44,14 @@ class trainer():
                 it = iter(dataloader)
     
     def prepare_model(self):
-        mantranet = create_model(4, True)
-        mantranet = model_load_weights(os.path.join(path_root,"ManTraNet_Ptrain4.h5"), mantranet)
+        if not self.finetune:    
+            mantranet = create_model(4, True)
+            mantranet = model_load_weights(os.path.join(path_root,"ManTraNet_Ptrain4.h5"), mantranet)
+        else:
+            mantranet = create_model(4, False)
+            mantranet.load_state_dict(torch.load(self.finetune))
+            mantranet = mantranet.cuda()
+        
         return mantranet
     
 
@@ -135,10 +144,11 @@ class trainer():
         sp_train_dataset = SplicingDataset(json_path, pic_path ,256, 256)
 
         #--------Prepare dataloader----------#
-        rm_train_dataloader = DataLoader(rm_train_dataset, batch_size=2, shuffle=True)
-        en_train_dataloader = DataLoader(en_train_dataset, batch_size=2, shuffle=True)
-        cp_train_dataloader = DataLoader(cp_train_dataset, batch_size=2, shuffle=True)
-        sp_train_dataloader = DataLoader(sp_train_dataset, batch_size=2, shuffle=True)
+        batch_size = 1
+        rm_train_dataloader = DataLoader(rm_train_dataset, batch_size=batch_size, shuffle=True)
+        en_train_dataloader = DataLoader(en_train_dataset, batch_size=batch_size, shuffle=True)
+        cp_train_dataloader = DataLoader(cp_train_dataset, batch_size=batch_size, shuffle=True)
+        sp_train_dataloader = DataLoader(sp_train_dataset, batch_size=batch_size, shuffle=True)
 
         rm_train_iter = self.infinite_iter(rm_train_dataloader)
         en_train_iter = self.infinite_iter(en_train_dataloader)
@@ -167,6 +177,10 @@ class trainer():
                 'sp': sp_val}
 
         self.train(mantranet, optim, self.iter, iters, vals, criterion, scheduler, self.epoch)
+    
+        
+    
+    
 
 
 if __name__ == '__main__':
@@ -174,9 +188,10 @@ if __name__ == '__main__':
     parser.add_argument("--epoch", type=int, default=30,help="epoch")
     parser.add_argument("--lr", type=float, default=1e-04,help="lr")
     parser.add_argument("--iter", type = int, default=100, help="iteration")
+    parser.add_argument("--finetune", type = str, default = "", help = "Enter finetune model.pth path")
     args = parser.parse_args()
 
-    t = trainer(args.epoch, args.iter, args.lr)
+    t = trainer(args.epoch, args.iter, args.lr, args.finetune)
     t.run()
 
 
