@@ -31,6 +31,8 @@ class CopyMoveDataset(Dataset):
 
     def __getitem__(self, idx):
         img, masking =  self.generate_picture()
+        while masking[:,:,:].sum() == 0: #Cropped may be all black
+            img, masking = self.generate_picture()
         while img.shape[0] < self.height or img.shape[1] < self.width:
             img, masking =  self.generate_picture()
         masking = masking[:, :, :1]
