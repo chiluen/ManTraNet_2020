@@ -83,7 +83,7 @@ class trainer():
                     model.Featex.b1c1.apply_bayar_constraint()
                     #model.outlierTrans.apply_constraint()
                     #model.glbStd.apply_clamp()
-                    
+
                 print("Epoch: %03d | Iter: %03d | Loss: %0.5f" % (epoch+1, i+1, loss.item()))
                 writer.add_scalar('Train/Loss', loss.item(), self.global_step)
                 self.global_step += 1
@@ -113,13 +113,14 @@ class trainer():
                 scheduler.step(valid_loss)
 
             ##terminal condition
+            """
             try:
                 if valid_loss > valid_loss_list[-1] and valid_loss > valid_loss_list[-2]:
                     print("Terminate because valid loss isn't decline")
                     return
             except:
                 pass
-
+            """
             valid_loss_list.append(valid_loss)
 
             if valid_loss <= valid_loss_min:
