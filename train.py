@@ -79,11 +79,11 @@ class trainer():
                 optim.zero_grad()
                 loss.backward()
                 optim.step()
-                if not self.finetune:
+                if self.finetune:
                     model.Featex.b1c1.apply_bayar_constraint()
-                    if not self.finetune:
-                        model.outlierTrans.apply_constraint()
-                        model.glbStd.apply_clamp()
+                    #model.outlierTrans.apply_constraint()
+                    #model.glbStd.apply_clamp()
+                    
                 print("Epoch: %03d | Iter: %03d | Loss: %0.5f" % (epoch+1, i+1, loss.item()))
                 writer.add_scalar('Train/Loss', loss.item(), self.global_step)
                 self.global_step += 1
