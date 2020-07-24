@@ -31,7 +31,7 @@ class CopyMoveDataset(Dataset):
 
     def __getitem__(self, idx):
         img, masking =  self.generate_picture()
-        while (img.shape[0] < self.height or img.shape[1] < self.width) and masking[:,:,:1][:,:,:].sum()==0:
+        while img.shape[0] < self.height or img.shape[1] < self.width or masking[:,:,:1][:,:,:].sum()==0:
             img, masking =  self.generate_picture()
         masking = masking[:, :, :1]
         img, masking = self.to_tensor(img), self.to_tensor(masking)
@@ -258,7 +258,7 @@ class SplicingDataset():
     def __getitem__(self, idx):
         img, masking =  self.generate_picture()
         
-        while (img.shape[0] < self.height or img.shape[1] < self.width) and masking[:,:,:1][:,:,:].sum()==0:
+        while img.shape[0] < self.height or img.shape[1] < self.width or masking[:,:,:1][:,:,:].sum()==0:
             img, masking = self.generate_picture()
         masking = masking[:, :, :1]
         img, masking = self.to_tensor(img), self.to_tensor(masking)
