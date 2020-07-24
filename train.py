@@ -16,12 +16,16 @@ from tqdm import tqdm
 import numpy as np
 import argparse
 import ipdb
+from datetime import datetime
+TIMESTAMP = "{0:%Y-%m-%dT%H-%M-%S/}".format(datetime.now())
 
 """
 Put all the data and pretrained model in this folder
 """
 path_root = "/media/chiluen/HDD"
-writer = SummaryWriter('log')
+#path_root = "./mydata"
+os.mkdir(os.path.join("./log", TIMESTAMP))
+writer = SummaryWriter(os.path.join("./log", TIMESTAMP))
 
 class trainer():
     def __init__(self, epoch, iteration, lr, finetune):
