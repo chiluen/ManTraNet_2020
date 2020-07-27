@@ -59,6 +59,7 @@ class CopyMoveDataset(Dataset):
                 img_h, img_w = img.shape[-2], img.shape[-1]
                 start_h = random.randint(0, img_h - self.height - 1)
                 start_w = random.randint(0, img_w - self.width - 1)
+            terminate_flag += 1
                 
         img = img[:, start_h:start_h+self.height, start_w:start_w+self.width]
         masking = masking[:, start_h:start_h+self.height, start_w:start_w+self.width]
@@ -303,10 +304,11 @@ class SplicingDataset():
                 img_h, img_w = img.shape[-2], img.shape[-1]
                 start_h = random.randint(0, img_h - self.height - 1)
                 start_w = random.randint(0, img_w - self.width - 1)
-                
+            terminate_flag += 1
+
         img = img[:, start_h:start_h+self.height, start_w:start_w+self.width]
         masking = masking[:, start_h:start_h+self.height, start_w:start_w+self.width]
-              
+
         return img, masking
         
     def generate_picture(self):
