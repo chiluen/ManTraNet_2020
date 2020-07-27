@@ -30,8 +30,9 @@ class CopyMoveDataset(Dataset):
         return 100000
 
     def __getitem__(self, idx):
+
         img, masking =  self.generate_picture()
-        while img.shape[0] < self.height or img.shape[1] < self.width or masking[:,:,:1][:,:,:].sum()==0:
+        while img.shape[0] < self.height or img.shape[1] < self.width:
             img, masking =  self.generate_picture()
         masking = masking[:, :, :1]
         img, masking = self.to_tensor(img), self.to_tensor(masking)
@@ -40,11 +41,28 @@ class CopyMoveDataset(Dataset):
         start_h = random.randint(0, img_h - self.height - 1)
         start_w = random.randint(0, img_w - self.width - 1)
         
+        terminate_flag = 0
         while masking[:, start_h:start_h+self.height, start_w:start_w+self.width].sum() == 0:
             start_h = random.randint(0, img_h - self.height - 1)
             start_w = random.randint(0, img_w - self.width - 1)
+            if terminate_flag == 1000:
+                terminate_flag = 0
+
+                #重新generate一張
+                while True: 
+                    img, masking =  self.generate_picture()
+                    if img.shape[0] > self.height and img.shape[1] > self.width:
+                        break
+                masking = masking[:, :, :1]
+                img, masking = self.to_tensor(img), self.to_tensor(masking)
+                # crop to (height, width)
+                img_h, img_w = img.shape[-2], img.shape[-1]
+                start_h = random.randint(0, img_h - self.height - 1)
+                start_w = random.randint(0, img_w - self.width - 1)
+                
         img = img[:, start_h:start_h+self.height, start_w:start_w+self.width]
         masking = masking[:, start_h:start_h+self.height, start_w:start_w+self.width]
+
         return img, masking
         
     def generate_picture(self):
@@ -256,21 +274,39 @@ class SplicingDataset():
         return 100000
 
     def __getitem__(self, idx):
+
         img, masking =  self.generate_picture()
-        
-        while img.shape[0] < self.height or img.shape[1] < self.width or masking[:,:,:1][:,:,:].sum()==0:
-            img, masking = self.generate_picture()
+        while img.shape[0] < self.height or img.shape[1] < self.width:
+            img, masking =  self.generate_picture()
         masking = masking[:, :, :1]
         img, masking = self.to_tensor(img), self.to_tensor(masking)
         # crop to (height, width)
         img_h, img_w = img.shape[-2], img.shape[-1]
         start_h = random.randint(0, img_h - self.height - 1)
         start_w = random.randint(0, img_w - self.width - 1)
+        
+        terminate_flag = 0
         while masking[:, start_h:start_h+self.height, start_w:start_w+self.width].sum() == 0:
             start_h = random.randint(0, img_h - self.height - 1)
             start_w = random.randint(0, img_w - self.width - 1)
+            if terminate_flag == 1000:
+                terminate_flag = 0
+
+                #重新generate一張
+                while True: 
+                    img, masking =  self.generate_picture()
+                    if img.shape[0] > self.height and img.shape[1] > self.width:
+                        break
+                masking = masking[:, :, :1]
+                img, masking = self.to_tensor(img), self.to_tensor(masking)
+                # crop to (height, width)
+                img_h, img_w = img.shape[-2], img.shape[-1]
+                start_h = random.randint(0, img_h - self.height - 1)
+                start_w = random.randint(0, img_w - self.width - 1)
+                
         img = img[:, start_h:start_h+self.height, start_w:start_w+self.width]
         masking = masking[:, start_h:start_h+self.height, start_w:start_w+self.width]
+              
         return img, masking
         
     def generate_picture(self):
