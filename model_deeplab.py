@@ -20,15 +20,15 @@ class ManTraNet(nn.Module):
         self.conv1 = nn.Conv2d(256, 48, 1, bias=False)
         self.bn1  = nn.BatchNorm2d(48)
         self.relu = nn.ReLU()
-        self.last_conv = nn.Sequential(nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1, bias=False),
+        self.last_conv = nn.Sequential(nn.Conv2d(304, 128, kernel_size=3, stride=1, padding=1, bias=False),
                                        nn.BatchNorm2d(256),
                                        nn.ReLU(),
                                        nn.Dropout(0.5),
-                                       nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False),
+                                       nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1, bias=False),
                                        nn.BatchNorm2d(256),
                                        nn.ReLU(),
                                        nn.Dropout(0.1),
-                                       nn.Conv2d(256, self.num_classes, kernel_size=1, stride=1))
+                                       nn.Conv2d(64, self.num_classes, kernel_size=1, stride=1))
 
     def forward(self,x):
         rf = self.Featex(x) #(batch, 256, H, W)
