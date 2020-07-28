@@ -13,44 +13,56 @@ import ipdb
 class ManTraNet(nn.Module):
     def __init__(self, Featex, pool_size_list=[7,15,31], is_dynamic_shape=True, apply_normalization=True, mid_channel = 3):
         super().__init__()
+
         self.num_classes = 1
         self.Featex = Featex
-        self.aspp = ASPP.ASPP(256)
+        self.sigmoid = nn.Sigmoid()
 
-        self.conv1 = nn.Conv2d(256, 48, 1, bias=False)
-        self.bn1  = nn.BatchNorm2d(48)
+        #ASPP and other layer
+        self.aspp = ASPP.ASPP(256)
+        self.bn_aspp  = nn.BatchNorm2d(256)
         self.relu = nn.ReLU()
-        self.last_conv = nn.Sequential(nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1, bias=False),
-                                       nn.BatchNorm2d(256),
+
+        #Decoder layer
+        self.conv1 = nn.Conv2d(256, 48, 1, bias=False)
+        self.bn1 = nn.BatchNorm2d(48)
+
+        #降低last_conv channel次數
+        self.last_conv = nn.Sequential(nn.Conv2d(304, 128, kernel_size=3, stride=1, padding=1, bias=False),
+                                       nn.BatchNorm2d(128),
                                        nn.ReLU(),
                                        nn.Dropout(0.5),
-                                       nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False),
-                                       nn.BatchNorm2d(256),
+                                       nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1, bias=False),
+                                       nn.BatchNorm2d(64),
                                        nn.ReLU(),
                                        nn.Dropout(0.1),
-                                       nn.Conv2d(256, self.num_classes, kernel_size=1, stride=1))
+                                       nn.Conv2d(64, self.num_classes, kernel_size=1, stride=1))
 
     def forward(self,x):
-        rf = self.Featex(x) #(batch, 256, H, W)
-        pp = self.aspp(rf) #(batch, 256, H, W)
-        #ipdb.set_trace()
-        rf = self.conv1(rf) #(batch, 48, H, W) for 1x1 conv
+
+        #------------Encoder-----------#
+        mid_output, rf = self.Featex(x) # (batch, 256, H, W), (batch, 256, H, W)
+        pp = self.aspp(mid_output) #(batch, 256, H, W)
+        pp = self.relu(self.bn_aspp(pp))
+
+        #------------Decoder-----------#
+
+        rf = self.conv1(rf) #(batch, 128, H, W) for 1x1 conv
         rf = self.relu(self.bn1(rf))
-
-        pp = F.interpolate(pp, size=rf.size()[2:], mode='bilinear', align_corners=True) #這一部沒用
-        block = torch.cat((pp, rf), dim=1) #(batch, 304, H, W)
-        
-        block = self.last_conv(block) #(batch, 1, H, W)
+        block = torch.cat((pp, rf), dim=1) #(batch, 48+256, H, W)
+        block = self.last_conv(block) #(batch, 1, H, W)  
+        pred_out = F.interpolate(block, size=x.size()[2:], mode='bilinear', align_corners=True) 
+        pred_out = self.sigmoid(pred_out)
         #ipdb.set_trace()
-        pred_out = F.interpolate(block, size=x.size()[2:], mode='bilinear', align_corners=True) #這一部沒用
 
-        pred_out = torch.sigmoid(pred_out)
+
         return pred_out
+
 
 def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31]):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     type_idx = IMC_model_idx if IMC_model_idx < 4 else 2
-    Featex = create_featex.Featex_vgg16_base(type_idx)
+    Featex = create_featex.Featex_vgg16_base(type_idx, mid_output=True)
     if freeze_featex:
         print("INFO: freeze feature extraction part, trainable=False")
         for p in Featex.parameters():

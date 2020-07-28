@@ -3,10 +3,11 @@ import torch
 import torch.nn.functional as F
 
 class Featex_vgg16_base(nn.Module):
-    def __init__(self, type=1):
+    def __init__(self, type=1, mid_output = False):
         super(Featex_vgg16_base, self).__init__()
         base = 32
         self.type = type
+        self.mid_output = mid_output
         # block 1
         in_channels = 3
         out_channels = base # 32
@@ -50,10 +51,15 @@ class Featex_vgg16_base(nn.Module):
         x = F.relu(self.b4c1(x))
         x = F.relu(self.b4c2(x))
         x = F.relu(self.b4c3(x))
+        if self.mid_output:
+            mid_x = x
         # block 5
         x = F.relu(self.b5c1(x))
         x = F.relu(self.b5c2(x))
         x = self.transform(x) if self.type >= 1 else torch.tanh(self.transform(x))
         # l2 normalization
         x = F.normalize(x, p=2, dim=1)
-        return x
+        if self.mid_output:
+            return mid_x, x
+        else:
+            return x

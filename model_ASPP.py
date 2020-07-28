@@ -13,12 +13,15 @@ class ManTraNet(nn.Module):
     def __init__(self, Featex, pool_size_list=[7,15,31], is_dynamic_shape=True, apply_normalization=True, mid_channel = 3):
         super().__init__()
         self.Featex = Featex
-        self.aspp = ASPP.ASPP(mid_channel)
+        self.aspp = ASPP.ASPP(256)
+        self.aspp_2 = ASPP.ASPP(1)
         self.unet = UNet(mid_channel, 1)
     def forward(self,x):
         rf = self.Featex(x) 
         pp = self.aspp(rf)
-        pred_out = self.unet(pp)
+        pred_out = self.aspp_2(pp)
+        #pred_out = pp
+        #pred_out = self.unet(pp)
         pred_out = torch.sigmoid(pred_out)
         return pred_out
 
