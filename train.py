@@ -2,7 +2,8 @@ import transforms_enhance as T
 from removal import RemoveTransform
 from coco_dataset import CopyMoveDataset, SplicingDataset
 from gen_patches import DresdenDataset
-from model_ASPP import create_model, model_load_weights
+#from model_ASPP import create_model, model_load_weights
+from model_deeplab_v2 import create_model, model_load_weights
 from val_dataset import VAL_Dataset
 
 import torch
@@ -17,6 +18,7 @@ import numpy as np
 import argparse
 import ipdb
 from datetime import datetime
+from apex import amp
 TIMESTAMP = "{0:%Y-%m-%dT%H-%M-%S/}".format(datetime.now())
 
 """
@@ -28,11 +30,12 @@ os.mkdir(os.path.join("./log", TIMESTAMP))
 writer = SummaryWriter(os.path.join("./log", TIMESTAMP))
 
 class trainer():
-    def __init__(self, epoch, iteration, lr, finetune):
+    def __init__(self, epoch, iteration, lr, finetune, fp16):
         self.epoch = epoch
         self.iter = iteration
         self.lr = lr
         self.finetune = finetune
+        self.fp16 = fp16
 
         self.global_step = 0
         self.num_imgs = 0
@@ -49,7 +52,7 @@ class trainer():
     
     def prepare_model(self):
         if not self.finetune:    
-            mantranet = create_model(4, True)
+            mantranet = create_model(4, False)
             mantranet = model_load_weights(os.path.join(path_root,"ManTraNet_Ptrain4.h5"), mantranet)
         else:
             mantranet = create_model(4, False)
@@ -77,14 +80,19 @@ class trainer():
                 loss = criterion(pred_masking, gt_masking)
 
                 optim.zero_grad()
-                loss.backward()
+                if self.fp16:
+                    with amp.scale_loss(loss, optim) as scaled_loss:
+                        scaled_loss.backward()
+                else:
+                    loss.backward()
+
                 optim.step()
                 if self.finetune:
                     model.Featex.b1c1.apply_bayar_constraint()
                     #model.outlierTrans.apply_constraint()
                     #model.glbStd.apply_clamp()
 
-                print("Epoch: %03d | Iter: %03d | Loss: %0.5f" % (epoch+1, i+1, loss.item()))
+                print("\rEpoch: %03d | Iter: %03d | Loss: %0.5f" % (epoch+1, i+1, loss.item()), end='')
                 writer.add_scalar('Train/Loss', loss.item(), self.global_step)
                 self.global_step += 1
 
@@ -174,6 +182,8 @@ class trainer():
         #--------train----------#
         mantranet = self.prepare_model()
         optim = torch.optim.Adam(mantranet.parameters(), lr = self.lr)
+        if self.fp16:
+            mantranet, optim = amp.initialize(mantranet, optim, opt_level="O1")
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, factor=0.5, patience=20)
         criterion = nn.BCELoss()
         iters = {'rm': rm_train_iter,
@@ -199,9 +209,10 @@ if __name__ == '__main__':
     parser.add_argument("--lr", type=float, default=1e-04,help="lr")
     parser.add_argument("--iter", type = int, default=100, help="iteration")
     parser.add_argument("--finetune", type = str, default = "", help = "Enter finetune model.pth path")
+    parser.add_argument("--fp16", action="store_true", help = "Use fp16")
     args = parser.parse_args()
 
-    t = trainer(args.epoch, args.iter, args.lr, args.finetune)
+    t = trainer(args.epoch, args.iter, args.lr, args.finetune, args.fp16)
     t.run()
 
 
