@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 
 class FCDiscriminator(nn.Module):
@@ -40,6 +41,6 @@ def spatial_CE(dis_output, real):
     dis_output: (batch, 1, N,N)
     """
     if real:
-        return -1 * torch.log(dis_output).mean()
+        return -1 * torch.log(dis_output).mean() if -1 * torch.log(dis_output).mean() != np.inf else 1e-10
     else:
-        return -1 * torch.log(1 - dis_output).mean()
+        return -1 * torch.log(1 - dis_output).mean() if -1 * torch.log(1 - dis_output).mean() != np.inf else 1e-10

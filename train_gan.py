@@ -61,12 +61,25 @@ class trainer():
     def train(self, iters, epoch, oppo_model):
         self.model.train()
         for i in range(self.num_iter):
-            rm_img, rm_masking = next(iters['rm'])
-            en_img, en_masking = next(iters['en'])
-            cp_img, cp_masking = next(iters['cp'])
-            sp_img, sp_masking = next(iters['sp'])
-            img = torch.cat([rm_img, en_img, cp_img, sp_img], dim=0)
-            gt_masking = torch.cat([rm_masking, en_masking, cp_masking, sp_masking], dim=0)
+
+            if i % 2:
+                rm_img, rm_masking = next(iters['rm'])
+                cp_img, cp_masking = next(iters['cp'])
+                img_list = [rm_img, cp_img]
+                msk_list = [rm_masking, cp_masking]
+            else:
+                en_img, en_masking = next(iters['en'])
+                sp_img, sp_masking = next(iters['sp'])
+                img_list = [en_img, sp_img]
+                msk_list = [en_masking, sp_masking]
+            img = torch.cat(img_list, dim=0)
+            gt_masking = torch.cat(msk_list, dim=0)
+            #rm_img, rm_masking = next(iters['rm'])
+            #en_img, en_masking = next(iters['en'])
+            #cp_img, cp_masking = next(iters['cp'])
+            #sp_img, sp_masking = next(iters['sp'])
+            #img = torch.cat([rm_img, en_img, cp_img, sp_img], dim=0)
+            #gt_masking = torch.cat([rm_masking, en_masking, cp_masking, sp_masking], dim=0)
             #img = torch.cat([rm_img, en_img], dim=0)
             #gt_masking = torch.cat([rm_masking, en_masking], dim=0)
             img = img.cuda()
