@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import ipdb
 
 
 class FCDiscriminator(nn.Module):
@@ -41,6 +42,9 @@ def spatial_CE(dis_output, real):
     dis_output: (batch, 1, N,N)
     """
     if real:
-        return -1 * torch.log(dis_output).mean() if -1 * torch.log(dis_output).mean() != np.inf else 1e-10
+        gt = torch.full(dis_output.shape, 1).cuda()
+        #CE = -1 * torch.log(dis_output).mean()
     else:
-        return -1 * torch.log(1 - dis_output).mean() if -1 * torch.log(1 - dis_output).mean() != np.inf else 1e-10
+        gt = torch.full(dis_output.shape, 0).cuda()
+        #CE = -1 * torch.log(1 - dis_output).mean() 
+    return F.binary_cross_entropy(dis_output, gt)
