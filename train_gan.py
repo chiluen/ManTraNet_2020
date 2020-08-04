@@ -266,7 +266,8 @@ def prepare_model():
 
 def adv_loss(pred_masking, gt_masking, dis_output, lambda_adv = 0.01):
     BCE = F.binary_cross_entropy(pred_masking, gt_masking)
-    adv = -1 * torch.log(dis_output).mean()
+    adv = F.binary_cross_entropy(dis_output, torch.full(dis_output.shape, 1).cuda())  
+    #adv = -1 * torch.log(dis_output).mean()
     #ipdb.set_trace()
     return BCE, adv
     #return lambda_adv * adv + (1 - lambda_adv) * BCE
