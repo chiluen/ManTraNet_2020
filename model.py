@@ -28,11 +28,11 @@ class ManTraNet(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.featex = None
         self.clstm = None
-        self.aspp = ASPP.ASPP(2)
+        #self.aspp = ASPP.ASPP(2)
         self.OPTS_aspp = OPTS_aspp
     def forward(self,x):
         rf = self.Featex(x) 
-        aspp_temp = rf
+        #aspp_temp = rf
         self.featex = rf
         rf = self.outlierTrans(rf) 
         bf = self.bnorm(rf) #(batch, channel=64, H, W)
@@ -50,8 +50,8 @@ class ManTraNet(nn.Module):
         pred_out = self.sigmoid(pred_out)
 
         ##temp setting
-        if self.OPTS_aspp:
-            pred_out = self.aspp(aspp_temp)
+        #if self.OPTS_aspp:
+        #    pred_out = self.aspp(aspp_temp)
 
         return pred_out
 
