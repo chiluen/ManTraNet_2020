@@ -257,7 +257,9 @@ class train():
 
 def prepare_model():  
     mantranet = create_model(4, True)
-    mantranet = model_load_weights(os.path.join(path_root,"ManTraNet_Ptrain4.h5"), mantranet)
+    #mantranet = model_load_weights(os.path.join(path_root,"ManTraNet_Ptrain4.h5"), mantranet)
+    mantranet.load_state_dict(torch.load("/media/chiluen/HDD/finetuned_weights.pth"))
+    mantranet = mantranet.cuda()
     dis = FCDiscriminator(1)
     if not args.dis_pretrain:
         dis.load_state_dict(torch.load("/home/chiluen/Desktop/ManTraNet_2020/checkpoints/1_Dis_mantra.pth"))

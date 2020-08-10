@@ -3,13 +3,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
-from module import Conv2d_modified, ConvLSTM, create_featex, NestedWindow, GlobalStd2D, ASPP
+from module import Conv2d_modified, ConvLSTM, create_featex, NestedWindow, GlobalStd2D, ASPP, backgroundWindow
 import load_weights
 import argparse
+from module.unet.__init__ import *
+import ipdb
 
 ##替代 create_manTraNet_model功能
 class ManTraNet(nn.Module):
-    def __init__(self, Featex, pool_size_list=[7,15,31], is_dynamic_shape=True, apply_normalization=True, OPTS_aspp = False):
+    def __init__(self, Featex, pool_size_list=[7,15,31], is_dynamic_shape=True, apply_normalization=True, OPTS_aspp = False, mid_channel = 3):
         super().__init__()
         self.Featex = Featex
         self.pool_size_list = pool_size_list
@@ -23,22 +25,34 @@ class ManTraNet(nn.Module):
         self.nestedAvgFeatex = NestedWindow.NestedWindowAverageFeatExtrator(window_size_list= self.pool_size_list, 
                                                                                output_mode='5d',
                                                                                minus_original=True) 
-        self.glbStd = GlobalStd2D.GlobalStd2D(64)   #input: number of features
+        self.backgroundwindow = backgroundWindow.backgroundWindow()
+        #self.glbStd = GlobalStd2D.GlobalStd2D(64)   #input: number of features
+        self.backStd = GlobalStd2D.BackgroundStd2D(64) #input: number of features
         self.cLSTM = ConvLSTM.ConvLSTM(input_dim = 64, hidden_dim = 8, kernel_size = (7, 7), num_layers = 1, batch_first = True, bias = True, return_all_layers = False)
         self.sigmoid = nn.Sigmoid()
-        self.featex = None
         self.clstm = None
-        #self.aspp = ASPP.ASPP(2)
-        self.OPTS_aspp = OPTS_aspp
+        self.aspp = ASPP.ASPP(3)
+        self.unet = UNet(mid_channel, 1)
+
+        
+
+
     def forward(self,x):
         rf = self.Featex(x) 
-        #aspp_temp = rf
-        self.featex = rf
-        rf = self.outlierTrans(rf) 
+
+        ##aspp masking
+        pp = self.aspp(rf)
+        aspp_mask = self.unet(pp)
+        aspp_mask = torch.sigmoid(aspp_mask) #(batch, 1, H, W)
+
+        rf = self.outlierTrans(rf)  
         bf = self.bnorm(rf) #(batch, channel=64, H, W)
-        devf5d = self.nestedAvgFeatex(bf) #(batch, 4, channel=64, H, W)
+        devf5d = self.backgroundwindow(bf, aspp_mask) #(batch, 4, channel=64, H, W)
+
+        #devf5d = self.nestedAvgFeatex(bf) #(batch, 4, channel=64, H, W)
         if self.apply_normalization:
-            sigma = self.glbStd(bf) #(batch, channel, H, W)   
+
+            sigma = self.backStd(bf, aspp_mask) #(batch, channel, 1, 1) 
             sigma5d = torch.unsqueeze(sigma, 1) 
             devf5d = torch.abs(devf5d / sigma5d) 
 
@@ -47,11 +61,7 @@ class ManTraNet(nn.Module):
         devf = last_states[0][0] #(batch, channel = 8, H, W)
         self.clstm = devf.detach().cpu().numpy()
         pred_out = self.pred(devf) #(batch, channel = 1, H, W)
-        pred_out = self.sigmoid(pred_out)
-
-        ##temp setting
-        #if self.OPTS_aspp:
-        #    pred_out = self.aspp(aspp_temp)
+        #pred_out = self.sigmoid(pred_out)
 
         return pred_out
 
@@ -87,8 +97,3 @@ def model_load_weights(weight_path, model):
     model.to(device)
 
     return model
-
-
-
-
-

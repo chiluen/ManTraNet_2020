@@ -3,7 +3,8 @@ from removal import RemoveTransform
 from coco_dataset import CopyMoveDataset, SplicingDataset
 from gen_patches import DresdenDataset
 #from model_ASPP import create_model, model_load_weights
-from model_deeplab_v2 import create_model, model_load_weights
+#from model_deeplab_v2 import create_model, model_load_weights
+from model_threshold_ASPP import create_model, model_load_weights
 from val_dataset import VAL_Dataset
 
 import torch
@@ -77,6 +78,7 @@ class trainer():
                 img = img.cuda()
                 gt_masking = gt_masking.cuda()
                 pred_masking = model(img)
+                #ipdb.set_trace()
                 loss = criterion(pred_masking, gt_masking)
 
                 optim.zero_grad()
@@ -92,7 +94,7 @@ class trainer():
                     #model.outlierTrans.apply_constraint()
                     #model.glbStd.apply_clamp()
 
-                print("\rEpoch: %03d | Iter: %03d | Loss: %0.5f" % (epoch+1, i+1, loss.item()), end='')
+                print("Epoch: %03d | Iter: %03d | Loss: %0.5f" % (epoch+1, i+1, loss.item()))
                 writer.add_scalar('Train/Loss', loss.item(), self.global_step)
                 self.global_step += 1
 
@@ -130,11 +132,15 @@ class trainer():
                 pass
             """
             valid_loss_list.append(valid_loss)
-
+            """
             if valid_loss <= valid_loss_min:
                     print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min, valid_loss))
                     torch.save(model.state_dict(), os.path.join(".", "checkpoints",str(epoch)+'_mantra.pth'))
                     valid_loss_min = valid_loss
+            """
+            print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min, valid_loss))
+            torch.save(model.state_dict(), os.path.join(".", "checkpoints",str(epoch)+'_mantra.pth'))
+            valid_loss_min = valid_loss
     
     def run(self):
 
@@ -182,10 +188,19 @@ class trainer():
         #--------train----------#
         mantranet = self.prepare_model()
         optim = torch.optim.Adam(mantranet.parameters(), lr = self.lr)
+        """
+        optim = torch.optim.Adam([
+                    {'params':mantranet.Featex.parameters()},
+                    {'params': [p for n, p in mantranet.named_parameters() if 'Featex' not in n],'lr': 1e-4}
+                ], lr=5e-5)
+        """
+
+
+
         if self.fp16:
             mantranet, optim = amp.initialize(mantranet, optim, opt_level="O1")
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, factor=0.5, patience=20)
-        criterion = nn.BCELoss()
+        criterion = nn.BCEWithLogitsLoss()
         iters = {'rm': rm_train_iter,
                 'en': en_train_iter,
                 'cp': cp_train_iter,

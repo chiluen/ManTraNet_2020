@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
+import ipdb
 
 class NestedWindowAverageFeatExtrator(nn.Module) :
     '''Custom Pytorch Layer of NestedWindowAverageFeatExtrator
@@ -57,6 +58,7 @@ class NestedWindowAverageFeatExtrator(nn.Module) :
         Cy, Cx = (bot, right) #By + height, Bx
         Dy, Dx = (bot, left) #Cy, Ax
         ii_key = (height,width)
+
         top_0   = -self.max_wh//2 - height//2 - 1
         bot_0   = top_0 + height
         left_0  = -self.max_ww//2 - width//2 - 1
@@ -83,6 +85,7 @@ class NestedWindowAverageFeatExtrator(nn.Module) :
         return avg_x_2d
     def forward( self, x ) :
         x_win_avgs = []
+        #ipdb.set_trace()
         # 1. compute corr(x, window_mean) for different sizes
         # 1.1 compute integral image buffer
         x_ii = self._initialize_ii_buffer( x )
