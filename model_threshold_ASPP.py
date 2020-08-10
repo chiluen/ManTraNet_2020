@@ -37,7 +37,14 @@ class ManTraNet(nn.Module):
         
 
 
-    def forward(self,x):
+    def forward(self,x, aspp = False):
+        if aspp == True:
+            rf = self.Featex(x)
+            pp = self.aspp(rf)
+            aspp_mask = self.unet(pp)
+            aspp_mask = torch.sigmoid(aspp_mask) #(batch, 1, H, W)
+            return aspp_mask
+
         rf = self.Featex(x) 
 
         ##aspp masking
