@@ -54,7 +54,7 @@ class ManTraNet(nn.Module):
 
             sigma = self.backStd(bf, aspp_mask) #(batch, channel, 1, 1) 
             sigma5d = torch.unsqueeze(sigma, 1) 
-            devf5d = torch.abs(devf5d / sigma5d) 
+            devf5d = torch.abs(devf5d / (sigma5d + 1e-07) ) #防止sigma5d太小
 
         # Convert back to 4d
         _, last_states = self.cLSTM(devf5d)  
