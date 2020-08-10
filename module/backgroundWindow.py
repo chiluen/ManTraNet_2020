@@ -4,9 +4,10 @@ import torch.nn.functional as F
 
 
 class backgroundWindow(nn.Module):
-    def __init__(self, window_size = [7,15,31]):
+    def __init__(self, window_size = [7,15,31], threshold=0.5):
         super().__init__()
         self.window_size = window_size
+        self.threshold = threshold
 
     def forward(self, bf, aspp_mask):
 
@@ -16,7 +17,7 @@ class backgroundWindow(nn.Module):
             padding = int((w - 1)/2)
 
             #取threshold
-            aspp_mask_temp = torch.where(aspp_mask > 0.5, torch.zeros(aspp_mask.shape).cuda(), torch.ones(aspp_mask.shape).cuda()) #background = 1, foreground = 0
+            aspp_mask_temp = torch.where(aspp_mask > self.threshold, torch.zeros(aspp_mask.shape).cuda(), torch.ones(aspp_mask.shape).cuda()) #background = 1, foreground = 0
             bf_binary = bf * aspp_mask_temp #只留background的值  #####要對它做mean(這時已經把ground truth忽略掉了)
 
             #取threshold後的mean,

@@ -11,7 +11,7 @@ import ipdb
 
 ##替代 create_manTraNet_model功能
 class ManTraNet(nn.Module):
-    def __init__(self, Featex, pool_size_list=[7,15,31], is_dynamic_shape=True, apply_normalization=True, OPTS_aspp = False, mid_channel = 3):
+    def __init__(self, Featex, pool_size_list=[7,15,31], is_dynamic_shape=True, apply_normalization=True, OPTS_aspp = False, mid_channel = 3, threshold = 0.5):
         super().__init__()
         self.Featex = Featex
         self.pool_size_list = pool_size_list
@@ -25,7 +25,7 @@ class ManTraNet(nn.Module):
         self.nestedAvgFeatex = NestedWindow.NestedWindowAverageFeatExtrator(window_size_list= self.pool_size_list, 
                                                                                output_mode='5d',
                                                                                minus_original=True) 
-        self.backgroundwindow = backgroundWindow.backgroundWindow()
+        self.backgroundwindow = backgroundWindow.backgroundWindow(threshold)
         #self.glbStd = GlobalStd2D.GlobalStd2D(64)   #input: number of features
         self.backStd = GlobalStd2D.BackgroundStd2D(64) #input: number of features
         self.cLSTM = ConvLSTM.ConvLSTM(input_dim = 64, hidden_dim = 8, kernel_size = (7, 7), num_layers = 1, batch_first = True, bias = True, return_all_layers = False)
@@ -79,7 +79,7 @@ class ManTraNet(nn.Module):
         elif fm == 'clstm':
             return self.clstm
 
-def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31], OPTS_aspp = False):
+def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31], OPTS_aspp = False, threshold = 0.5):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     type_idx = IMC_model_idx if IMC_model_idx < 4 else 2
     Featex = create_featex.Featex_vgg16_base(type_idx)
@@ -94,7 +94,7 @@ def create_model(IMC_model_idx, freeze_featex, window_size_list=[7,15,31], OPTS_
             ly.trainable = False  ##也沒有這個選項
             print("INFO: freeze", ly.name)
     """
-    model = ManTraNet(Featex, pool_size_list=window_size_list, is_dynamic_shape=True, apply_normalization=True, OPTS_aspp=OPTS_aspp)
+    model = ManTraNet(Featex, pool_size_list=window_size_list, is_dynamic_shape=True, apply_normalization=True, OPTS_aspp=OPTS_aspp, threshold=threshold)
     return model
 
 

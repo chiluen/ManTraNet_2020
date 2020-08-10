@@ -26,10 +26,25 @@ TIMESTAMP = "{0:%Y-%m-%dT%H-%M-%S/}".format(datetime.now())
 """
 Put all the data and pretrained model in this folder
 """
+parser = argparse.ArgumentParser()
+parser.add_argument("--epoch", type=int, default=30,help="epoch")
+parser.add_argument("--lr", type=float, default=1e-04,help="lr")
+parser.add_argument("--iter", type = int, default=100, help="iteration")
+parser.add_argument("--finetune", type = str, default = "", help = "Enter finetune model.pth path")
+parser.add_argument("--fp16", action="store_true", help = "Use fp16")
+parser.add_argument("--aspp-loss", type = str, default = "tversky")
+parser.add_argument("--mantra-loss", type = str, default= "BCE")
+parser.add_argument("--threshold", type = float, default = 0.5)
+args = parser.parse_args()
+
+
 path_root = "/media/chiluen/HDD"
 #path_root = "./mydata"
 os.mkdir(os.path.join("./log", TIMESTAMP))
+os.mkdir(os.path.join("./checkpoints", args.aspp_loss + "_" +args.mantra_loss + "_" +str(args.threshold)))
+checkpoint_dir = os.path.join("./checkpoints", args.aspp_loss + "_" +args.mantra_loss + "_" +str(args.threshold))
 writer = SummaryWriter(os.path.join("./log", TIMESTAMP))
+
 
 class trainer():
     def __init__(self, epoch, iteration, lr, finetune, fp16):
@@ -54,7 +69,7 @@ class trainer():
     
     def prepare_model(self):
         if not self.finetune:    
-            mantranet = create_model(4, False)
+            mantranet = create_model(4, False, threshold=args.threshold)
             mantranet = model_load_weights(os.path.join(path_root,"ManTraNet_Ptrain4.h5"), mantranet)
         else:
             mantranet = create_model(4, False)
@@ -110,11 +125,11 @@ class trainer():
                 print("Epoch: %03d | Iter: %03d | Loss: %0.5f" % (epoch+1, i+1, loss.item()))
                 writer.add_scalar('Train/Loss', loss.item(), self.global_step)
                 self.global_step += 1
-
             model.eval()
             valid_loss = 0.0
             print("#---Enter validation---#")
-            for i in tqdm(range(int(self.num_imgs/3))):
+            
+            for i in tqdm(range(int(self.num_imgs/30))):
 
                 cp_img, cp_masking = vals['cp'].__getitem__(i)
                 sp_img, sp_masking = vals['sp'].__getitem__(i)
@@ -151,8 +166,9 @@ class trainer():
                     torch.save(model.state_dict(), os.path.join(".", "checkpoints",str(epoch)+'_mantra.pth'))
                     valid_loss_min = valid_loss
             """
+            
             print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min, valid_loss))
-            torch.save(model.state_dict(), os.path.join(".", "checkpoints",str(epoch)+'_mantra.pth'))
+            torch.save(model.state_dict(), os.path.join(checkpoint_dir, str(epoch)+'_mantra.pth'))
             valid_loss_min = valid_loss
     
     def run(self):
@@ -215,9 +231,20 @@ class trainer():
         if self.fp16:
             mantranet, optim = amp.initialize(mantranet, optim, opt_level="O1")
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim[1], factor=0.5, patience=20)
-        #criterion_1 = dice_loss.DiceLoss()
-        criterion_1 = tversky_loss.TverskyLoss()
-        criterion_2 = nn.BCEWithLogitsLoss()
+
+
+        if args.aspp_loss == "tversky":
+            criterion_1 = tversky_loss.TverskyLoss()
+        else:
+            criterion_1 = nn.BCEWithLogitsLoss()
+
+        if args.mantra_loss == "BCE":
+            criterion_2 = nn.BCEWithLogitsLoss()
+        else:
+            criterion_2 = tversky_loss.TverskyLoss()
+
+        #criterion_1 = tversky_loss.TverskyLoss()
+        #criterion_2 = nn.BCEWithLogitsLoss()
         criterion = [criterion_1, criterion_2]
         iters = {'rm': rm_train_iter,
                 'en': en_train_iter,
@@ -228,22 +255,12 @@ class trainer():
                 'en': en_val,
                 'cp': cp_val,
                 'sp': sp_val}
-
+        
         self.train(mantranet, optim, self.iter, iters, vals, criterion, scheduler, self.epoch)
     
         
-    
-    
-
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--epoch", type=int, default=30,help="epoch")
-    parser.add_argument("--lr", type=float, default=1e-04,help="lr")
-    parser.add_argument("--iter", type = int, default=100, help="iteration")
-    parser.add_argument("--finetune", type = str, default = "", help = "Enter finetune model.pth path")
-    parser.add_argument("--fp16", action="store_true", help = "Use fp16")
-    args = parser.parse_args()
 
     t = trainer(args.epoch, args.iter, args.lr, args.finetune, args.fp16)
     t.run()
