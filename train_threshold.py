@@ -127,7 +127,7 @@ class trainer():
                 gt_masking = gt_masking.cuda()
                 with torch.no_grad():
                     pred_masking = model(img)
-                loss = criterion(pred_masking, gt_masking)
+                loss = criterion[1](pred_masking, gt_masking)
                 
                 valid_loss += loss.item()
                 
