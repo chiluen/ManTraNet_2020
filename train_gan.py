@@ -27,11 +27,6 @@ TIMESTAMP = "{0:%Y-%m-%dT%H-%M-%S/}".format(datetime.now())
 """
 Put all the data and pretrained model in this folder
 """
-path_root = "/media/chiluen/HDD"
-#path_root = "./mydata"
-os.mkdir(os.path.join("./log", TIMESTAMP))
-writer = SummaryWriter(os.path.join("./log", TIMESTAMP))
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--epoch", type=int, default=30,help="epoch")
 parser.add_argument("--lr", type=float, default=1e-04,help="lr")
@@ -41,6 +36,16 @@ parser.add_argument("--fp16", action="store_true", help = "Use fp16")
 parser.add_argument("--dis-pretrain", action="store_true", help = "Training discriminator only")
 parser.add_argument("--multi-D", type = int, default=2, help="Perform 1GXD training")
 args = parser.parse_args()
+
+
+path_root = "/media/chiluen/HDD"
+dis_path_root = "/home/chiluen/Desktop/ManTraNet_2020/checkpoints/1_Dis_mantra.pth"
+#path_root = "./mydata"
+os.mkdir(os.path.join("./log", TIMESTAMP))
+os.mkdir(os.path.join("./checkpoints", "Multi_D_"+ str(args.multi_D) ))
+checkpoint_dir = os.path.join("./checkpoints", "Multi_D_"+str(args.multi_D) )
+writer = SummaryWriter(os.path.join("./log", TIMESTAMP))
+
 
 class trainer():
     def __init__(self, model, optim, num_iter, criterion, scheduler, lr, finetune, fp16, flag="Gen"):
@@ -132,7 +137,7 @@ class trainer():
     def valid(self, vals, epoch, oppo_model):
         self.model.eval()
         valid_loss = 0.0
-        num_imgs = int(vals['rm'].__len__() / 10)
+        num_imgs = int(vals['rm'].__len__() / 50)
         print("#---Enter validation---#")
 
         for i in tqdm(range(num_imgs)):
@@ -169,7 +174,7 @@ class trainer():
 
         if valid_loss <= self.valid_loss_min:
                 print(self.flag + '| Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(self.valid_loss_min, valid_loss))
-                torch.save(self.model.state_dict(), os.path.join(".", "checkpoints",str(epoch)+ "_" + self.flag + '_mantra.pth'))
+                torch.save(self.model.state_dict(), os.path.join(checkpoint_dir,str(epoch)+ "_" + self.flag + '_mantra.pth'))
                 self.valid_loss_min = valid_loss
 
 class train():
@@ -262,7 +267,7 @@ def prepare_model():
     mantranet = mantranet.cuda()
     dis = FCDiscriminator(1)
     if not args.dis_pretrain:
-        dis.load_state_dict(torch.load("/home/chiluen/Desktop/ManTraNet_2020/checkpoints/1_Dis_mantra.pth"))
+        dis.load_state_dict(torch.load(dis_path_root))
     dis = dis.cuda()
     return mantranet, dis 
 
