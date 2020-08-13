@@ -4,7 +4,8 @@ from coco_dataset import CopyMoveDataset, SplicingDataset
 from gen_patches import DresdenDataset
 #from model_ASPP import create_model, model_load_weights
 #from model_deeplab_v2 import create_model, model_load_weights
-from model_threshold_ASPP import create_model, model_load_weights
+#from model_threshold_ASPP import create_model, model_load_weights
+from model_non_local import create_model, model_load_weights
 from val_dataset import VAL_Dataset
 
 import torch
@@ -21,6 +22,16 @@ import ipdb
 from datetime import datetime
 from apex import amp
 TIMESTAMP = "{0:%Y-%m-%dT%H-%M-%S/}".format(datetime.now())
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--epoch", type=int, default=30,help="epoch")
+parser.add_argument("--lr", type=float, default=1e-04,help="lr")
+parser.add_argument("--iter", type = int, default=100, help="iteration")
+parser.add_argument("--finetune", type = str, default = "", help = "Enter finetune model.pth path")
+parser.add_argument("--fp16", action="store_true", help = "Use fp16")
+parser.add_argument("--bs2", action = "store_true", help="Use small batch size")
+parser.add_argument("--bs1", action = "store_true", help="Use small batch size")
+args = parser.parse_args()
 
 """
 Put all the data and pretrained model in this folder
@@ -53,7 +64,7 @@ class trainer():
     
     def prepare_model(self):
         if not self.finetune:    
-            mantranet = create_model(4, False)
+            mantranet = create_model(4, True)
             mantranet = model_load_weights(os.path.join(path_root,"ManTraNet_Ptrain4.h5"), mantranet)
         else:
             mantranet = create_model(4, False)
@@ -68,13 +79,53 @@ class trainer():
         for epoch in range(epochs):
             model.train()
             for i in range(num_iter):
-                rm_img, rm_masking = next(iters['rm'])
-                en_img, en_masking = next(iters['en'])
-                cp_img, cp_masking = next(iters['cp'])
-                sp_img, sp_masking = next(iters['sp'])
+                if args.bs2:
+                    if i % 2 == 0:
+                        rm_img, rm_masking = next(iters['rm'])
+                        cp_img, cp_masking = next(iters['cp'])
+                        img_list = [rm_img, cp_img]
+                        msk_list = [rm_masking, cp_masking]
+                        #img_list = [rm_img]
+                        #msk_list = [rm_masking]
+                    else:
+                        en_img, en_masking = next(iters['en'])
+                        sp_img, sp_masking = next(iters['sp'])
+                        img_list = [en_img, sp_img]
+                        msk_list = [en_masking, sp_masking]
+                        #img_list = [en_img]
+                        #msk_list = [en_masking]
+                
+                if args.bs1:
+                    if i % 4 ==0:
+                        rm_img, rm_masking = next(iters['rm'])
+                        img_list = [rm_img]
+                        msk_list = [rm_masking]
 
-                img = torch.cat([rm_img, en_img, cp_img, sp_img], dim=0)
-                gt_masking = torch.cat([rm_masking, en_masking, cp_masking, sp_masking], dim=0)
+                    elif i % 4 == 1:
+                        cp_img, cp_masking = next(iters['cp'])
+                        img_list = [cp_img]
+                        msk_list = [cp_masking]
+
+                    elif i % 4 == 2:
+                        en_img, en_masking = next(iters['en'])
+                        img_list = [en_img]
+                        msk_list = [en_masking]
+
+                    else:
+                        sp_img, sp_masking = next(iters['sp'])
+                        img_list = [sp_img]
+                        msk_list = [sp_masking]
+
+                else:
+                    rm_img, rm_masking = next(iters['rm'])
+                    en_img, en_masking = next(iters['en'])
+                    cp_img, cp_masking = next(iters['cp'])
+                    sp_img, sp_masking = next(iters['sp'])
+                    img_list = [rm_img,en_img,cp_img,sp_img]
+                    msk_list = [rm_masking, en_masking, cp_masking,sp_masking]
+
+                img = torch.cat(img_list, dim=0)
+                gt_masking = torch.cat(msk_list, dim=0)
                 img = img.cuda()
                 gt_masking = gt_masking.cuda()
                 pred_masking = model(img)
@@ -219,13 +270,6 @@ class trainer():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--epoch", type=int, default=30,help="epoch")
-    parser.add_argument("--lr", type=float, default=1e-04,help="lr")
-    parser.add_argument("--iter", type = int, default=100, help="iteration")
-    parser.add_argument("--finetune", type = str, default = "", help = "Enter finetune model.pth path")
-    parser.add_argument("--fp16", action="store_true", help = "Use fp16")
-    args = parser.parse_args()
 
     t = trainer(args.epoch, args.iter, args.lr, args.finetune, args.fp16)
     t.run()
