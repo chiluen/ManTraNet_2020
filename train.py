@@ -135,7 +135,6 @@ class trainer():
                 img = img.cuda()
                 gt_masking = gt_masking.cuda()
                 pred_masking = model(img)
-                #ipdb.set_trace()
                 loss = criterion(pred_masking, gt_masking)
 
                 optim.zero_grad()

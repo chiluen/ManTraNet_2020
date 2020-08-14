@@ -47,15 +47,12 @@ class ManTraNet(nn.Module):
         )
 
         self.conv_4 = nn.Sequential(
-            Conv2d_modified.Conv2d_samepadding(32, 1, 1, padding='SAME'),
-            nn.BatchNorm2d(1),
-            nn.ReLU()
+            Conv2d_modified.Conv2d_samepadding(32, 1, 1, padding='SAME')
         )
 
 
 
     def forward(self,x):
-
 
         rf = self.Featex(x) #(batch, channel=256, H, W)
         feature = self.ann_nl_1(rf) #(batch, channel=256, H, W)
@@ -64,7 +61,6 @@ class ManTraNet(nn.Module):
         feature = self.ann_nl_2(feature) #(batch, channel=64, H, W)
         feature = self.conv_3(feature)
         pred_out = self.conv_4(feature)
-
 
         return pred_out
 

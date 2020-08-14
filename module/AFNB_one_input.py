@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+import ipdb
 
 
 class PSPModule(nn.Module):
@@ -69,12 +70,11 @@ class _SelfAttentionBlock(nn.Module):
                            kernel_size=1, stride=1, padding=0)
 
         self.psp = PSPModule(psp_size)
-        nn.init.constant_(self.W.weight, 0)
-        nn.init.constant_(self.W.bias, 0)
+        #nn.init.constant_(self.W.weight, 0)
+        #nn.init.constant_(self.W.bias, 0)
 
     def forward(self, x):
         batch_size, h, w = x.size(0), x.size(2), x.size(3)
-
         key = self.f_key(x)
         key = self.psp(key)  
 
