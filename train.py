@@ -5,7 +5,9 @@ from gen_patches import DresdenDataset
 #from model_ASPP import create_model, model_load_weights
 #from model_deeplab_v2 import create_model, model_load_weights
 #from model_threshold_ASPP import create_model, model_load_weights
-from model_non_local import create_model, model_load_weights
+#from model_non_local import create_model, model_load_weights
+#from model_ann_nonlocal import create_model, model_load_weights
+from model_ann_nonlocal_pure import create_model, model_load_weights
 from val_dataset import VAL_Dataset
 
 import torch
@@ -39,6 +41,11 @@ Put all the data and pretrained model in this folder
 path_root = "/media/chiluen/HDD"
 #path_root = "./mydata"
 os.mkdir(os.path.join("./log", TIMESTAMP))
+checkpoint_dir = os.path.join("./checkpoints", "ass_nonlocal_" ) ##後面自己加上用了幾個Non local block
+if not os.path.isdir(checkpoint_dir):
+    os.mkdir( checkpoint_dir ) 
+
+
 writer = SummaryWriter(os.path.join("./log", TIMESTAMP))
 
 class trainer():
@@ -75,7 +82,6 @@ class trainer():
     
 
     def train(self, model, optim, num_iter, iters, vals, criterion, scheduler=None,epochs = 30, valid_loss_min = np.Inf):
-        valid_loss_list = []
         for epoch in range(epochs):
             model.train()
             for i in range(num_iter):
@@ -152,7 +158,8 @@ class trainer():
             model.eval()
             valid_loss = 0.0
             print("#---Enter validation---#")
-            for i in tqdm(range(int(self.num_imgs/3))):
+            validation_img_numbers = int(self.num_imgs/3)
+            for i in tqdm(range(validation_img_numbers)):
 
                 cp_img, cp_masking = vals['cp'].__getitem__(i)
                 sp_img, sp_masking = vals['sp'].__getitem__(i)
@@ -169,28 +176,12 @@ class trainer():
                 
                 valid_loss += loss.item()
                 
-            valid_loss = valid_loss / self.num_imgs
+            valid_loss = valid_loss / validation_img_numbers
             if scheduler:
                 scheduler.step(valid_loss)
 
-            ##terminal condition
-            """
-            try:
-                if valid_loss > valid_loss_list[-1] and valid_loss > valid_loss_list[-2]:
-                    print("Terminate because valid loss isn't decline")
-                    return
-            except:
-                pass
-            """
-            valid_loss_list.append(valid_loss)
-            """
-            if valid_loss <= valid_loss_min:
-                    print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min, valid_loss))
-                    torch.save(model.state_dict(), os.path.join(".", "checkpoints",str(epoch)+'_mantra.pth'))
-                    valid_loss_min = valid_loss
-            """
             print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min, valid_loss))
-            torch.save(model.state_dict(), os.path.join(".", "checkpoints",str(epoch)+'_mantra.pth'))
+            torch.save(model.state_dict(), os.path.join(checkpoint_dir,str(epoch)+'_mantra.pth'))
             valid_loss_min = valid_loss
     
     def run(self):
